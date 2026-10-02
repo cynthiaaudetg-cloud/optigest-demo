@@ -1062,6 +1062,20 @@
   a.tile small{ color:var(--muted); font-size:.83rem; line-height:1.45; }
   a.tile .go{ font-size:.82rem; font-weight:700; color:var(--brand-deep); margin-top:auto; }
   @media (prefers-color-scheme: dark){ a.tile .go{ color:var(--brand); } }
+  #gm-dash-tiles .tile{
+    display:flex; flex-direction:column; gap:.25rem;
+    background:var(--surface); border:1.5px solid var(--line);
+    border-radius:var(--radius); padding:.9rem 1rem;
+    box-shadow:var(--shadow);
+  }
+  #gm-dash-tiles .tile:hover{ border-color:var(--brand); }
+  #gm-dash-tiles .tile-n{ font-family:"Archivo", sans-serif; font-weight:800; font-size:1.7rem; color:var(--brand-deep); line-height:1; }
+  #gm-dash-tiles .tile-l{ font-size:.85rem; color:var(--muted); }
+  #gm-dash-tiles .tile-go{ font-size:.8rem; font-weight:700; color:var(--brand); margin-top:.25rem; }
+  #gm-dash-tiles .tile-warn{ border-color:var(--warn); }
+  #gm-dash-tiles .tile-warn .tile-n{ color:var(--warn); }
+  #gm-dash-tiles .tile-ok{ opacity:.75; }
+  #gm-dash-tiles .tile-ok .tile-n{ color:var(--ok); }
   .ws-cols{ display:grid; grid-template-columns:1fr 1fr; gap:1.1rem; align-items:start; }
   @media (max-width:900px){ .ws-cols{ grid-template-columns:1fr; } }
   .ws-msg{ font-size:.88rem; color:var(--ink-soft); margin:0 0 .8rem; min-height:1.2em; }
@@ -1532,6 +1546,11 @@
         <span>Vous êtes connecté comme <strong>gestionnaire</strong> : vous voyez <strong>tout</strong> (dispatch, Trello, Excel, documents, clavardage automatisé, rappels) et vous gérez les accès ci-dessous.</span>
       </div>
       <div class="tile-grid" id="gm-tiles"></div>
+      <div class="card acc-panel" id="gm-dashboard">
+        <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>Ce qui demande votre attention</h3>
+        <p style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .8rem;">L'important d'un coup d'œil, avec un bouton pour y aller directement.</p>
+        <div class="tile-grid" id="gm-dash-tiles" style="margin-top:.4rem;"></div>
+      </div>
       <div class="card acc-panel">
         <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4"/></svg>Mon entreprise</h3>
         <p style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .8rem;">Le nom affiché aux acheteurs quand ils commandent. Laissez vide pour garder « votre entreprise ».</p>
@@ -3204,6 +3223,7 @@ function setLog(lines){
     ul.appendChild(li);
   });
   box.appendChild(ul);
+  if(typeof renderGmDashboard === 'function') renderGmDashboard();
 }
 
 function byId(id){
@@ -4891,7 +4911,44 @@ function renderGmStats(){
     '<span class="stat-chip">' + TRANSFER_LOG.length + ' transfert' + pl(TRANSFER_LOG.length) + '</span>';
   $('gm-avatar').textContent = session.user.charAt(0).toUpperCase();
   $('gm-title').textContent = 'Espace Gestionnaire — ' + session.user;
+  renderGmDashboard();
 }
+/* Tableau de bord : l'important d'un coup d'œil, avec accès rapide */
+function renderGmDashboard(){
+  var box = $('gm-dash-tiles');
+  if(!box || !session || session.role !== 'gestionnaire') return;
+  var now = new Date(); now.setHours(0,0,0,0);
+  var urg = courses.filter(function(c){ return c.prio === 'urgent' && c.statut !== 'fait'; }).length;
+  var retard = tasks.filter(function(t){
+    if(t.col === 'done') return false;
+    var d = parseDue(t.due);
+    return d && d < now;
+  }).length;
+  var nonLus = MSGS.filter(function(m){ return !m.read && m.to === 'Gestionnaire'; }).length;
+  var stockBas = INV.filter(function(i){ return i.qte <= i.seuil; }).length;
+  var aPlacer = courses.filter(function(c){ return c.depart === null; }).length;
+  function tile(n, label, target, kind){
+    var cls = n > 0 ? (kind || '') : ' tile-ok';
+    return '<div class="tile' + cls + '" style="cursor:pointer;" data-dash-go="' + target + '">' +
+      '<div class="tile-n">' + n + '</div><div class="tile-l">' + label + '</div>' +
+      '<div class="tile-go">Aller →</div></div>';
+  }
+  box.innerHTML =
+    tile(urg, 'courses urgentes', '#dispatch', ' tile-warn') +
+    tile(retard, 'tâches en retard', '#trello', ' tile-warn') +
+    tile(nonLus, 'messages non lus', '#gm-msgs', '') +
+    tile(stockBas, 'articles sous le seuil', '#inventaire', '') +
+    tile(aPlacer, 'courses à placer', '#dispatch', '');
+}
+(function(){
+  document.addEventListener('click', function(e){
+    var t = e.target.closest('[data-dash-go]');
+    if(!t) return;
+    var target = t.getAttribute('data-dash-go');
+    var el = $(target.slice(1));
+    if(el) scrollToEl(el);
+  });
+})();
 function renderGmTiles(){
   if(!session || session.role !== 'gestionnaire') return;
   var aPlacer = courses.filter(function(c){ return c.depart === null; }).length;
@@ -5003,7 +5060,7 @@ renderDrivers = function(){ __rD(); store.save(); if(session) renderWsAll(); };
 renderPending = function(){ __rP(); store.save(); if(session) renderWsAll(); };
 renderAvis = function(){ __rA(); store.save(); if(session) renderWsAll(); };
 /* Tout est enregistré dans le navigateur à chaque mise à jour de ces panneaux */
-function __wrapSaved(f){ return function(){ f.apply(null, Array.prototype.slice.call(arguments)); store.save(); }; }
+function __wrapSaved(f){ return function(){ f.apply(null, Array.prototype.slice.call(arguments)); store.save(); if(typeof renderGmDashboard === 'function') renderGmDashboard(); }; }
 renderBoard = __wrapSaved(renderBoard);
 renderDocs = __wrapSaved(renderDocs);
 renderReminders = __wrapSaved(renderReminders);
