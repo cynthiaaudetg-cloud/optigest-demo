@@ -1373,6 +1373,12 @@
   <span class="session-dot" aria-hidden="true"></span>
   <span id="session-label"></span>
   <a class="btn btn-secondary btn-sm" href="#espace-gestionnaire" id="session-space">Voir mon espace</a>
+  <span id="session-switch" style="display:inline-flex;gap:.3rem;align-items:center;margin-left:.4rem;">
+    <span style="font-size:.78rem;opacity:.85;">Essayer comme :</span>
+    <button type="button" class="btn btn-secondary btn-sm" data-test-login="gestionnaire">Gestionnaire</button>
+    <button type="button" class="btn btn-secondary btn-sm" data-test-login="acheteur">Acheteur</button>
+    <button type="button" class="btn btn-secondary btn-sm" data-test-login="livreur">Livreur</button>
+  </span>
   <button type="button" class="btn btn-secondary btn-sm" id="btn-logout">Se déconnecter</button>
 </div>
 <!-- ================= HERO ================= -->
@@ -3495,12 +3501,52 @@ function fillMsgTo(sel, selfId){
     return '<option value="' + esc(r.id) + '"' + (r.id === cur ? ' selected' : '') + '>' + esc(r.label) + '</option>';
   }).join('');
 }
-function sendMsg(from, to, text){
+function sendMsg(from, to, text, courseId){
   text = String(text || '').trim();
   if(!text || !to) return false;
-  MSGS.push({from:from, to:to, text:text, ts:Date.now(), read:false});
+  MSGS.push({from:from, to:to, text:text, ts:Date.now(), read:false, courseId: courseId || null});
   store.save(); renderMsgs();
   return true;
+}
+/* Clavardage acheteur-livreur pendant la livraison (style Uber Eats) */
+function truckName(driver){ return 'Livreur (Camion ' + (driver === 'B' ? '2' : '1') + ')'; }
+function courseChatHtml(c){
+  if(c.statut !== 'encours') return '';
+  return '<div style="margin-top:.6rem;">' +
+    '<button type="button" class="btn btn-secondary btn-sm" data-chat-toggle="' + c.id + '">💬 Contacter le livreur</button>' +
+    '<div id="chat-box-' + c.id + '" hidden style="margin-top:.5rem;border:1px solid var(--line);border-radius:10px;padding:.6rem;background:var(--surface);">' +
+      '<div id="chat-msgs-' + c.id + '"></div>' +
+      '<div class="field-row" style="align-items:end;margin-top:.4rem;">' +
+        '<div class="field"><label class="sr-only" for="chat-input-' + c.id + '">Message au livreur</label>' +
+        '<input type="text" id="chat-input-' + c.id + '" placeholder="Ex. Je suis au 2e étage, sonnez deux fois…" maxlength="300" autocomplete="off" /></div>' +
+        '<div class="field" style="max-width:120px;"><button type="button" class="btn btn-primary btn-sm" data-chat-send="' + c.id + '">Envoyer</button></div>' +
+      '</div>' +
+    '</div></div>';
+}
+function renderCourseChat(cid){
+  var box = $('chat-msgs-' + cid);
+  if(!box) return;
+  var msgs = MSGS.filter(function(m){ return m.courseId === cid; }).sort(function(a, b){ return a.ts - b.ts; });
+  box.innerHTML = msgs.length ? msgs.map(function(m){
+    var mine = m.from === 'Acheteur';
+    return '<div style="margin:.35rem 0;text-align:' + (mine ? 'right' : 'left') + ';">' +
+      '<span style="display:inline-block;background:' + (mine ? 'var(--brand)' : '#eef2f7') + ';color:' + (mine ? '#fff' : 'var(--ink)') + ';border-radius:12px;padding:.35rem .65rem;max-width:92%;font-size:.85rem;text-align:left;">' + esc(m.text) + '</span>' +
+      '<div style="font-size:.7rem;color:var(--muted);margin-top:.1rem;">' + esc(m.from) + ' · ' + esc(msgTime(m.ts)) + '</div></div>';
+  }).join('') : '<p class="ws-note" style="margin:.2rem 0;">Aucun message. Écrivez au livreur pendant qu\u2019il est en route.</p>';
+}
+function livMsgHtml(m, idx){
+  var h = msgHtml(m);
+  if(m.courseId && m.from === 'Acheteur'){
+    h += '<div style="margin:.3rem 0;"><button type="button" class="btn btn-secondary btn-sm" data-reply-toggle="' + idx + '">Répondre à l\u2019acheteur</button>' +
+      '<div id="reply-box-' + idx + '" hidden style="margin-top:.4rem;">' +
+        '<div class="field-row" style="align-items:end;">' +
+          '<div class="field"><label class="sr-only" for="reply-input-' + idx + '">Réponse à l\u2019acheteur</label>' +
+          '<input type="text" id="reply-input-' + idx + '" placeholder="Votre réponse…" maxlength="300" autocomplete="off" /></div>' +
+          '<div class="field" style="max-width:120px;"><button type="button" class="btn btn-primary btn-sm" data-reply-send="' + idx + '">Envoyer</button></div>' +
+        '</div>' +
+      '</div></div>';
+  }
+  return h;
 }
 function renderMsgs(){
   var me = currentLivreur();
@@ -3510,10 +3556,11 @@ function renderMsgs(){
   var changed = false;
   MSGS.forEach(function(m){ if(m.to === me && !m.read){ m.read = true; changed = true; } });
   if(changed) store.save();
-  var mine = MSGS.filter(function(m){ return m.from === me || m.to === me; });
+  var items = [];
+  MSGS.forEach(function(m, i){ if(m.from === me || m.to === me) items.push({m:m, i:i}); });
   var livBox = $('liv-msgs');
-  if(livBox) livBox.innerHTML = mine.length
-    ? mine.slice(-6).reverse().map(msgHtml).join('')
+  if(livBox) livBox.innerHTML = items.length
+    ? items.slice(-8).reverse().map(function(o){ return livMsgHtml(o.m, o.i); }).join('')
     : '<p class="ws-note">Aucun message pour l\u2019instant.</p>';
   var gmBox = $('gm-msgs');
   if(gmBox) gmBox.innerHTML = MSGS.length
@@ -3556,6 +3603,48 @@ function renderMsgs(){
   });
   var truck = $('ws-truck');
   if(truck) truck.addEventListener('change', renderMsgs);
+  var livBox2 = $('liv-msgs');
+  if(livBox2) livBox2.addEventListener('click', function(e){
+    var rt = e.target.closest('[data-reply-toggle]');
+    if(rt){
+      var rb = $('reply-box-' + rt.getAttribute('data-reply-toggle'));
+      if(rb){ rb.hidden = !rb.hidden; }
+      return;
+    }
+    var rs = e.target.closest('[data-reply-send]');
+    if(rs){
+      var idx = +rs.getAttribute('data-reply-send');
+      var m = MSGS[idx];
+      var inp = $('reply-input-' + idx);
+      var txt = inp.value.trim();
+      if(!txt || !m){ if(inp) inp.focus(); return; }
+      MSGS.push({from:currentLivreur(), to:'Acheteur', text:txt, ts:Date.now(), read:false, courseId:m.courseId});
+      store.save(); renderMsgs(); renderCourseChat(m.courseId);
+    }
+  });
+  var demBox = $('ws-demands');
+  if(demBox) demBox.addEventListener('click', function(e){
+    var tgl = e.target.closest('[data-chat-toggle]');
+    if(tgl){
+      var cid = tgl.getAttribute('data-chat-toggle');
+      var cb = $('chat-box-' + cid);
+      if(cb){ cb.hidden = !cb.hidden; if(!cb.hidden) renderCourseChat(cid); }
+      return;
+    }
+    var snd = e.target.closest('[data-chat-send]');
+    if(snd){
+      var cid2 = snd.getAttribute('data-chat-send');
+      var c = null;
+      courses.forEach(function(x){ if(String(x.id) === String(cid2)) c = x; });
+      var inp2 = $('chat-input-' + cid2);
+      var txt2 = inp2.value.trim();
+      if(!txt2){ inp2.focus(); return; }
+      var who = (session && session.role === 'gestionnaire') ? 'Gestionnaire' : 'Acheteur';
+      var dest = c ? truckName(c.driver) : currentLivreur();
+      MSGS.push({from:who, to:dest, text:txt2, ts:Date.now(), read:false, courseId:cid2});
+      store.save(); inp2.value = ''; renderCourseChat(cid2); renderMsgs();
+    }
+  });
   renderMsgs();
 })();
 var COMPANY = (SAVED && typeof SAVED.company === 'string') ? SAVED.company : '';
@@ -4634,9 +4723,10 @@ function loginAs(acc, opts){
   ACTIVE_SESSION_ROLE = acc.role;
   store.save();
   if(acc.role === 'livreur') wsTruck = acc.driver || 'A';
+  var voirTout = acc.role === 'gestionnaire';
   ROLES.forEach(function(r){
-    var auth = $('auth-' + r); if(auth) auth.hidden = acc.role !== r;
-    var desk = $('ws-' + r); if(desk) desk.hidden = acc.role !== r;
+    var auth = $('auth-' + r); if(auth) auth.hidden = true;
+    var desk = $('ws-' + r); if(desk) desk.hidden = !(voirTout || acc.role === r);
   });
   applyGates();
   renderWsAll();
@@ -4715,7 +4805,7 @@ function driverOf(id){
 var wsTruck = null; /* camion choisi par le livreur (indépendant du compte) */
 function chosenTruck(){ return wsTruck || (session && session.driver) || 'A'; }
 function renderWsLivreur(){
-  if(!session || session.role !== 'livreur') return;
+  if(!session || (session.role !== 'livreur' && session.role !== 'gestionnaire')) return;
   var d = driverOf(chosenTruck()) || DRIVERS[0];
   var truckSel = $('ws-truck'); if(truckSel) truckSel.value = d.id;
   $('liv-avatar').textContent = (d.chauffeur || session.user).charAt(0).toUpperCase();
@@ -4746,13 +4836,14 @@ function demandeCard(c){
   return '<div class="course"><div class="chips">' + statutChip(c) +
     '<span class="chip chip-secteur">' + esc(c.secteur) + '</span>' +
     '<span class="chip chip-' + c.prio + '">' + (c.prio === 'urgent' ? 'Urgente' : 'Normale') + '</span></div>' +
-    '<p><strong>' + esc(c.type) + '</strong> — ' + esc(c.adr) + eta + '</p></div>';
+    '<p><strong>' + esc(c.type) + '</strong> — ' + esc(c.adr) + eta + '</p>' + courseChatHtml(c) + '</div>';
 }
 function renderWsAcheteur(){
-  if(!session || session.role !== 'acheteur') return;
+  if(!session || (session.role !== 'acheteur' && session.role !== 'gestionnaire')) return;
+  var isGm = session.role === 'gestionnaire';
   $('dem-avatar').textContent = session.user.charAt(0).toUpperCase();
-  $('dem-title').textContent = 'Bonjour ' + session.user;
-  var mine = courses.filter(function(c){ return c.createdBy === session.user; });
+  $('dem-title').textContent = isGm ? 'Toutes les commandes' : 'Bonjour ' + session.user;
+  var mine = isGm ? courses.slice() : courses.filter(function(c){ return c.createdBy === session.user; });
   var faits = mine.filter(function(c){ return c.statut === 'fait'; }).length;
   $('dem-stats').innerHTML = '<span class="stat-chip">' + mine.length + ' commande' + pl(mine.length) + '</span>' +
     '<span class="stat-chip">' + (mine.length - faits) + ' suivie' + pl(mine.length - faits) + '</span>' +
