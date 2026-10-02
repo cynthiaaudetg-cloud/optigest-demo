@@ -1725,6 +1725,20 @@
                   <option value="960">16 h 00</option>
                 </select>
               </div>
+              <div class="field" id="c-heurecueillette-wrap" hidden>
+                <label for="c-heurecueillette">Heure d'arrivée (cueillette)</label>
+                <select id="c-heurecueillette">
+                  <option value="480">8 h 00</option>
+                  <option value="540">9 h 00</option>
+                  <option value="600">10 h 00</option>
+                  <option value="660">11 h 00</option>
+                  <option value="720">12 h 00</option>
+                  <option value="780">13 h 00</option>
+                  <option value="840">14 h 00</option>
+                  <option value="900">15 h 00</option>
+                  <option value="960">16 h 00</option>
+                </select>
+              </div>
             </div>
             <div class="field">
               <span class="field-label">Priorité</span>
@@ -1937,6 +1951,9 @@
           </div>
           <div class="field" style="max-width:220px;">
             <button type="button" class="btn btn-secondary btn-sm" id="btn-export-tasks">Exporter les tâches (Excel)</button>
+          </div>
+          <div class="field" style="max-width:220px;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-sort-presse" aria-pressed="false" title="Trie les tâches : en retard et urgentes d'abord, puis par échéance">Les plus pressantes d'abord</button>
           </div>
         </div>
       </div>
@@ -2916,6 +2933,7 @@ function courseCard(c, deletable, opt){
              statutChip(c);
   var lieu = c.ville ? esc(c.adr) + ', ' + esc(c.ville) : esc(c.adr);
   var dem = (c.kind === 'fixe' && c.heureFixe !== null ? ' · <strong>Départ fixe à ' + fmtHeure(c.heureFixe) + '</strong>' : '') +
+            (c.kind === 'cueillette' && c.heureCueillette !== null && c.heureCueillette !== undefined ? ' · <strong>Arrivée à ' + fmtHeure(c.heureCueillette) + '</strong>' : '') +
             (c.avant !== null ? ' · <strong>Demandé avant ' + fmtHeure(c.avant) + '</strong>' : '') +
             (c.stoxMails > 1 ? ' · <strong>📧 ' + c.stoxMails + ' courriels consolidés</strong>' : '');
   var cls = c.prio + (c.statut === 'encours' ? ' encours' : '') + (c.statut === 'fait' ? ' fait' : '');
@@ -2978,7 +2996,7 @@ function updateStats(){
 }
 function signature(){
   return courses
-    .map(function(c){ return c.id + ':' + (c.kind || 'flexible') + ':' + c.heureFixe + ':' + c.prio + ':' + c.avant + ':' + c.driver + ':' + c.depart; })
+    .map(function(c){ return c.id + ':' + (c.kind || 'flexible') + ':' + c.heureFixe + ':' + c.heureCueillette + ':' + c.prio + ':' + c.avant + ':' + c.driver + ':' + c.depart; })
     .sort().join('|');
 }
 
@@ -3025,8 +3043,13 @@ function optimize(opts){
   courses.forEach(function(c){ if(c.prio === 'urgent' && c.depart !== null) prevUrgentPlaced[c.id] = 1; });
 
   // Règle : urgentes d'abord, puis demandes avec heure limite, puis regroupement par secteur.
-  // Les courses « fixes » sont verrouillées à leur heure de départ et placées en premier.
-  var fixes = courses.filter(function(c){ return c.kind === 'fixe' && c.heureFixe !== null; });
+  // Les courses « fixes » (départ fixe) et « cueillettes » (arrivée à heure précise) sont verrouillées et placées en premier.
+  function pinnedTime(c){
+    if(c.kind === 'fixe' && c.heureFixe !== null && c.heureFixe !== undefined) return c.heureFixe;
+    if(c.kind === 'cueillette' && c.heureCueillette !== null && c.heureCueillette !== undefined) return c.heureCueillette;
+    return null;
+  }
+  var fixes = courses.filter(function(c){ return pinnedTime(c) !== null; });
   var pool = courses.filter(function(c){ return fixes.indexOf(c) === -1; }).sort(function(a,b){
     if(a.prio !== b.prio) return a.prio === 'urgent' ? -1 : 1;
     var ar = a.avant !== null, br = b.avant !== null;
@@ -3061,15 +3084,16 @@ function optimize(opts){
   }
   var lines = [];
   if(opts.prelude){ opts.prelude.forEach(function(p){ lines.push(p); }); }
-  // 1. Courses fixes : départ verrouillé, placées en premier
+  // 1. Courses à heure verrouillée : placées en premier
   fixes.forEach(function(c, i){
     var id = DRIVERS[i % DRIVERS.length].id;
-    c.driver = id; c.depart = c.heureFixe;
-    book(id, c.heureFixe, c.heureFixe + dureeEff(c));
+    var t = pinnedTime(c);
+    c.driver = id; c.depart = t;
+    book(id, t, t + dureeEff(c));
   });
   if(fixes.length){
-    lines.push(fixes.length + ' course' + (fixes.length > 1 ? 's' : '') + ' à départ fixe verrouillée' + (fixes.length > 1 ? 's' : '') + ' : ' +
-      fixes.map(function(c){ return '« ' + c.client + ' » à ' + fmtHeure(c.heureFixe); }).join(' · ') + '.');
+    lines.push(fixes.length + ' course' + (fixes.length > 1 ? 's' : '') + ' à heure verrouillée' + (fixes.length > 1 ? 's' : '') + ' : ' +
+      fixes.map(function(c){ return '« ' + c.client + ' » ' + (c.kind === 'cueillette' ? 'arrivée à ' : 'départ ') + fmtHeure(pinnedTime(c)); }).join(' · ') + '.');
   }
   // 2. Les autres : premier créneau libre, par ordre de priorité
   pool.forEach(function(c){
@@ -3276,6 +3300,7 @@ $('course-form').addEventListener('submit', function(e){
     prio: document.querySelector('input[name="c-prio"]:checked').value,
     kind: kind,
     heureFixe: kind === 'fixe' ? parseInt($('c-heurefixe').value, 10) : null,
+    heureCueillette: kind === 'cueillette' ? parseInt($('c-heurecueillette').value, 10) : null,
     origin: 'dispatch'
   }).client;
   $('course-form').reset();
@@ -3319,7 +3344,9 @@ $('btn-email').addEventListener('click', function(){
   }, 2100);
 });
 $('c-kind').addEventListener('change', function(){
-  $('c-heurefixe-wrap').hidden = ($('c-kind').value !== 'fixe');
+  var k = $('c-kind').value;
+  $('c-heurefixe-wrap').hidden = (k !== 'fixe');
+  $('c-heurecueillette-wrap').hidden = (k !== 'cueillette');
 });
 /* Simulation STOX : plusieurs courriels « commande prête » = une seule course consolidée */
 var stoxMails = 0, stoxCourseId = null;
@@ -3338,7 +3365,7 @@ $('btn-stox').addEventListener('click', function(){
       id:stoxCourseId, client:'STOX Distributions',
       adr:'Coin Chauveau / Henri-IV', ville:'Québec',
       secteur:'Nord', type:'Ramassage de pièces', duree:40, prio:'normal',
-      kind:'flexible', heureFixe:null,
+      kind:'flexible', heureFixe:null, heureCueillette:null,
       avant:null, canal:'courriel', statut:'plan', feedbackOpen:false,
       depart:null, driver:null, origDriver:null, stoxMails:stoxMails
     });
@@ -3566,7 +3593,39 @@ var tasks = (function(){ var a = savedArray('tasks'); return a ? a : [
   { id:'t7', col:'todo', label:'comptabilite', t:"Fermeture d'année — Compagnie A : pièces justificatives", due:'30 novembre', qui:'Simon', recur:'annuelle', notes:[] }
 ]; })();
 var newTaskN = (SAVED && typeof SAVED.newTaskN === 'number') ? SAVED.newTaskN : 0;
-var taskSearch = '', taskFiltreQui = '', taskFiltreLabel = '';
+var taskSearch = '', taskFiltreQui = '', taskFiltreLabel = '', taskSortPresse = false;
+/* « Laquelle presse le plus » : trie les tâches par urgence réelle */
+var MOIS_FR = {janvier:0,jan:0,'fév':1,fevrier:1,'février':1,mars:2,mar:2,avril:3,avr:3,mai:4,juin:5,jun:5,juillet:6,jul:6,'août':7,aout:7,septembre:8,sept:8,sep:8,octobre:9,oct:9,novembre:10,nov:10,'décembre':11,decembre:11,'déc':11,dec:11};
+function parseDue(s){
+  if(!s) return null;
+  var m = String(s).toLowerCase().replace(/1er/, '1').replace(/\./g, '').match(/(\d{1,2})\s*([a-zéû]+)\s*(\d{4})?/);
+  if(!m) return null;
+  var mo = MOIS_FR[m[2]];
+  if(mo === undefined) return null;
+  var y = m[3] ? parseInt(m[3], 10) : new Date().getFullYear();
+  return new Date(y, mo, parseInt(m[1], 10));
+}
+function taskScore(t){
+  var s = 0;
+  if(t.label === 'urgent') s -= 1000;
+  var d = parseDue(t.due);
+  var now = new Date(); now.setHours(0,0,0,0);
+  if(d){
+    var days = Math.round((d - now) / 86400000);
+    if(days < 0) s -= 500;
+    s += Math.max(days, 0) * 10;
+  } else s += 5000;
+  return s;
+}
+(function(){
+  var sb = $('btn-sort-presse');
+  if(sb) sb.addEventListener('click', function(){
+    taskSortPresse = !taskSortPresse;
+    sb.setAttribute('aria-pressed', String(taskSortPresse));
+    sb.classList.toggle('chip-secteur', taskSortPresse);
+    renderBoard();
+  });
+})();
 function renderLabelChips(){
   var wrap = $('task-label-chips');
   if(!wrap) return;
@@ -3652,6 +3711,7 @@ function renderBoard(){
   var html = '';
   COL_ORDER.forEach(function(col, ci){
     var list = tasks.filter(function(t){ return t.col === col && taskMatch(t); });
+    if(taskSortPresse) list.sort(function(a, b){ return taskScore(a) - taskScore(b); });
     var total = tasks.filter(function(t){ return t.col === col; }).length;
     html += '<div class="column' + (col === 'done' ? ' donecol' : '') + '">' +
       '<div class="column-head"><span>' + COLS[col] + '</span><span class="column-count">' +
@@ -4402,7 +4462,7 @@ function createPendingCourse(o){
     ville: o.ville || '',
     secteur:o.secteur, type:o.type, duree:o.duree, prio:(o.prio || 'normal'),
     avant:(o.avant === undefined ? null : o.avant),
-    kind:(o.kind || 'flexible'), heureFixe:(o.heureFixe === undefined ? null : o.heureFixe),
+    kind:(o.kind || 'flexible'), heureFixe:(o.heureFixe === undefined ? null : o.heureFixe), heureCueillette:(o.heureCueillette === undefined ? null : o.heureCueillette),
     canal:(o.canal || 'direct'), statut:'plan', feedbackOpen:false,
     depart:null, driver:null, origDriver:null,
     origin:(o.origin || null), createdBy:(o.createdBy || null)
