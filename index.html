@@ -529,6 +529,30 @@
     .lbl-fournisseur{ background:#2b2f63; color:#b3b9f5; }
   }
   .tcard .moves{ display:flex; gap:.4rem; margin-top:.6rem; }
+  .tcard .meta2{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.45rem; align-items:center; }
+  .qui-badge{ font-size:.72rem; font-weight:700; background:var(--surface3); color:var(--ink-soft); border-radius:999px; padding:.1rem .55rem; }
+  .recur-badge{ font-size:.72rem; font-weight:700; background:#fef3c7; color:#92400e; border-radius:999px; padding:.1rem .55rem; }
+  .notes-badge{ font-size:.72rem; font-weight:700; background:#e0f2fe; color:#075985; border-radius:999px; padding:.1rem .55rem; }
+  @media (prefers-color-scheme: dark){
+    .recur-badge{ background:#4a3a12; color:#fcd34d; }
+    .notes-badge{ background:#0c3a52; color:#7dd3fc; }
+  }
+  .td-titre{ font-weight:700; font-size:1rem; margin:0 0 .8rem; line-height:1.4; }
+  .td-journal-titre{ margin:1rem 0 .5rem; font-size:.9rem; }
+  .td-journal{ max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:.5rem; margin-bottom:.8rem; }
+  .td-note{ background:var(--surface3); border-radius:8px; padding:.5rem .65rem; font-size:.85rem; line-height:1.4; }
+  .td-note-head{ display:flex; justify-content:space-between; gap:.5rem; font-size:.78rem; color:var(--muted); margin-bottom:.2rem; }
+  .td-note-head strong{ color:var(--ink); }
+  .td-empty{ color:var(--muted); font-size:.85rem; margin:0; }
+  .td-add{ border-top:1px solid var(--line); padding-top:.8rem; }
+  .inv-low{ background:rgba(220,38,38,.07); }
+  @media (prefers-color-scheme: dark){ .inv-low{ background:rgba(248,113,113,.12); } }
+  .inv-alert{ font-size:.75rem; font-weight:700; color:#b91c1c; }
+  @media (prefers-color-scheme: dark){ .inv-alert{ color:#fca5a5; } }
+  .inv-desc{ font-size:.82rem; color:var(--muted); }
+  .inv-qte{ display:inline-flex; align-items:center; gap:.4rem; white-space:nowrap; }
+  .qty-btn{ font:inherit; font-weight:700; width:1.7rem; height:1.7rem; border:1.5px solid var(--line); background:transparent; color:var(--ink); border-radius:7px; cursor:pointer; line-height:1; }
+  .qty-btn:hover{ background:var(--surface3); }
   .move-btn{
     flex:1; font:inherit; font-size:.8rem; font-weight:700;
     background:transparent; color:var(--muted);
@@ -1416,6 +1440,8 @@
         <h3>Ce qui fonctionne</h3>
         <ul>
           <li>Ajout, modification et suppression de courses, tâches, documents et questions</li>
+          <li>Suivi des tâches : responsables, échéances récurrentes, journal d’avancement écrit et recherche par mot-clé</li>
+          <li>Inventaire : stock de pneus, seuils d’alerte, ajustements de quantités et export CSV</li>
           <li>Optimisation de la journée du dispatch (ordre, temps morts, urgences)</li>
           <li>Export Excel (CSV) de la journée de courses et des tâches</li>
           <li>Comptes par rôle (gestionnaire, acheteur, livreur) avec création et connexion</li>
@@ -1819,16 +1845,175 @@
 
       <section class="section role-module" id="trello">
       <div class="sec-head">
-        <h2><span class="num">2</span>Un exemple de tableau Trello</h2>
-        <p>Voici à quoi pourrait ressembler le tableau de tâches quotidien d'une entreprise de démonstration, avec des étiquettes par type de travail. Déplacez les cartes avec les flèches, comme dans Trello : les compteurs suivent. Vous pouvez aussi modifier le titre de chaque tâche (✎), la supprimer (×) et changer son étiquette en cliquant dessus.</p>
+        <h2><span class="num">2</span>Suivi des tâches : échéances, responsables et avancement</h2>
+        <p>Fini les suivis qui se perdent : chaque tâche a un responsable, une échéance qui peut se répéter au mois, aux 3 mois ou à l'année, et un journal écrit — qui a fait quoi, quand. Recherchez par mot-clé, filtrez par responsable, puis cliquez sur 🔍 pour voir tout l'historique d'une tâche, comme l'exemple de la facture impayée ci-dessous.</p>
+      </div>
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="field-row">
+          <div class="field">
+            <label for="task-search">Rechercher par mot-clé</label>
+            <input type="text" id="task-search" placeholder="ex. facture, inventaire, Demoservice…" maxlength="60" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="task-filtre-qui">Responsable</label>
+            <select id="task-filtre-qui">
+              <option value="">Tous</option>
+              <option>Simon</option>
+              <option>Adjointe 1</option>
+              <option>Adjointe 2</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div class="board" id="board" aria-live="polite"></div>
-      <p style="font-size:.82rem;color:var(--muted);margin-top:1rem;">La création automatique des tâches, avec des rappels d'échéance : fonction prévue, non incluse dans cette démo.</p>
+      <div class="card" style="margin-top:1rem;">
+        <h3>Ajouter une tâche</h3>
+        <div class="field-row">
+          <div class="field">
+            <label for="nt-titre">Titre</label>
+            <input type="text" id="nt-titre" placeholder="ex. Vérifier l'état de compte du client…" maxlength="120" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="nt-qui">Responsable</label>
+            <select id="nt-qui">
+              <option>Simon</option>
+              <option>Adjointe 1</option>
+              <option>Adjointe 2</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row" style="margin-top:.6rem;">
+          <div class="field">
+            <label for="nt-due">Échéance</label>
+            <input type="text" id="nt-due" placeholder="ex. 15 octobre" maxlength="40" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="nt-recur">Récurrence</label>
+            <select id="nt-recur">
+              <option value="aucune">Aucune</option>
+              <option value="mensuelle">Mensuelle</option>
+              <option value="trimestrielle">Aux 3 mois</option>
+              <option value="annuelle">Annuelle</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="nt-label">Étiquette</label>
+            <select id="nt-label">
+              <option value="inventaire">Inventaire</option>
+              <option value="comptabilite">Comptabilité</option>
+              <option value="dispatch">Dispatch</option>
+              <option value="fournisseur">Fournisseur</option>
+            </select>
+          </div>
+        </div>
+        <p style="margin-top:.8rem;"><button type="button" class="btn btn-primary" id="btn-nt-add">Ajouter la tâche</button></p>
+      </div>
+      <p style="font-size:.82rem;color:var(--muted);margin-top:1rem;">Astuce : terminez une tâche récurrente et sa prochaine échéance se crée toute seule dans « À faire ». Tout est enregistré dans votre navigateur.</p>
+    </section>
+
+      <section class="section role-module" id="inventaire">
+      <div class="sec-head">
+        <h2><span class="num">3</span>Inventaire : pneus en stock, seuils et alertes</h2>
+        <p>Le stock de pneus en un coup d'œil : quantités, seuils d'alerte, valeur totale. Ajustez les quantités à la réception ou à la vente avec − / +, ajoutez un article, exportez en CSV.</p>
+      </div>
+      <div class="opt-stats" id="inv-stats" aria-live="polite"></div>
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="field-row">
+          <div class="field">
+            <label for="inv-search">Rechercher</label>
+            <input type="text" id="inv-search" placeholder="ex. hiver, 205/55, NordTrek…" maxlength="60" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="inv-filtre-cat">Catégorie</label>
+            <select id="inv-filtre-cat">
+              <option value="">Toutes</option>
+              <option>Hiver</option>
+              <option>Été</option>
+              <option>4 saisons</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="inv-filtre-alerte">Alertes</label>
+            <select id="inv-filtre-alerte">
+              <option value="">Tous les articles</option>
+              <option value="bas">Sous le seuil seulement</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-scroll">
+          <table class="factures" id="inv-table" aria-live="polite">
+            <thead>
+              <tr>
+                <th scope="col">Article</th>
+                <th scope="col">Catégorie</th>
+                <th scope="col">Marque</th>
+                <th scope="col">Emplacement</th>
+                <th scope="col">Quantité</th>
+                <th scope="col">Seuil</th>
+                <th scope="col">Coût unit.</th>
+                <th scope="col">Valeur</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inv-body"></tbody>
+          </table>
+        </div>
+        <p style="margin-top:.8rem;"><button type="button" class="btn btn-secondary btn-sm" id="btn-inv-csv">Exporter en CSV</button></p>
+      </div>
+      <div class="card" style="margin-top:1rem;">
+        <h3>Ajouter un article</h3>
+        <div class="field-row">
+          <div class="field">
+            <label for="ni-sku">SKU / code</label>
+            <input type="text" id="ni-sku" maxlength="20" placeholder="ex. H24567" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="ni-desc">Description</label>
+            <input type="text" id="ni-desc" maxlength="80" placeholder="ex. Pneu d'hiver 205/55R16" autocomplete="off" />
+          </div>
+        </div>
+        <div class="field-row" style="margin-top:.6rem;">
+          <div class="field">
+            <label for="ni-cat">Catégorie</label>
+            <select id="ni-cat">
+              <option>Hiver</option>
+              <option>Été</option>
+              <option>4 saisons</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="ni-marque">Marque</label>
+            <input type="text" id="ni-marque" maxlength="30" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="ni-emp">Emplacement</label>
+            <input type="text" id="ni-emp" maxlength="10" placeholder="ex. A-04" autocomplete="off" />
+          </div>
+        </div>
+        <div class="field-row" style="margin-top:.6rem;">
+          <div class="field">
+            <label for="ni-qte">Quantité</label>
+            <input type="number" id="ni-qte" min="0" max="9999" value="0" />
+          </div>
+          <div class="field">
+            <label for="ni-seuil">Seuil d'alerte</label>
+            <input type="number" id="ni-seuil" min="0" max="9999" value="5" />
+          </div>
+          <div class="field">
+            <label for="ni-cout">Coût unitaire ($)</label>
+            <input type="number" id="ni-cout" min="0" max="99999" step="0.01" value="0" />
+          </div>
+        </div>
+        <p style="margin-top:.8rem;"><button type="button" class="btn btn-primary" id="btn-ni-add">Ajouter l'article</button></p>
+      </div>
+      <p style="font-size:.82rem;color:var(--muted);margin-top:1rem;">Données fictives de démonstration, enregistrées dans votre navigateur. Les lignes en surbrillance sont sous le seuil d'alerte.</p>
     </section>
 
       <section class="section role-module" id="excel">
       <div class="sec-head">
-        <h2><span class="num">3</span>Analyse automatisée : vos états de compte</h2>
+        <h2><span class="num">4</span>Analyse automatisée : vos états de compte</h2>
         <p>Choisissez un relevé, lancez l'analyse : OptiGest vérifie ligne par ligne — charges, paiements, totaux, doublons, montants inhabituels — et vous indique qui doit encore payer, qui est soldé et qui a payé en trop.</p>
       </div>
       <div class="tabs" id="stmt-tabs" role="group" aria-label="Choisir un état de compte"></div>
@@ -1872,7 +2057,7 @@
 
       <section class="section role-module" id="documents">
       <div class="sec-head">
-        <h2><span class="num">4</span>Documents et fichiers : enregistrer, classer, partager</h2>
+        <h2><span class="num">5</span>Documents et fichiers : enregistrer, classer, partager</h2>
         <p>Un seul endroit pour toutes les pièces de toutes vos compagnies : chaque document est enregistré et classé dans le bon dossier, toujours au même endroit. Et pour votre travail d'équipe, un espace privé réservé à vos collaborateurs.</p>
       </div>
       <div class="doc-grid">
@@ -2004,7 +2189,7 @@
 
       <section class="section role-module" id="quotidien">
       <div class="sec-head">
-        <h2><span class="num">5</span>OptiGest au quotidien</h2>
+        <h2><span class="num">6</span>OptiGest au quotidien</h2>
         <p>À commencer par ce qui compte le plus pour vous — vos fermetures d'année, par exemple — puis chaque jour, avec votre validation :</p>
       </div>
       <div class="focus-band">
@@ -2315,7 +2500,7 @@
   <!-- ================= MÉTHODE ================= -->
   <section class="section" id="methode">
     <div class="sec-head">
-      <h2><span class="num">6</span>La méthode OptiGest</h2>
+      <h2><span class="num">7</span>La méthode OptiGest</h2>
       <p>Pour que vous soyez à l'aise, voici les règles qu'OptiGest respecte quand on met quelque chose en place ensemble :</p>
     </div>
     <div class="method-grid">
@@ -2453,6 +2638,7 @@ var store = {
         docs:DOCS, docN:docN,
         rems:REMS,
         questions:QUESTIONS, qN:qN,
+        inv:INV, invN:invN,
         accounts:ACCOUNTS,
         sessions:SESSIONS, activeSessionRole:ACTIVE_SESSION_ROLE,
         transfers:TRANSFER_LOG, routeCh:ROUTE_CH
@@ -2988,52 +3174,96 @@ $('rules-body').addEventListener('click', function(ev){
 });
 renderRules();
 
-/* ================= TRELLO ================= */
+/* ================= TÂCHES : suivi gestionnaire ================= */
 var COL_ORDER = ['todo','doing','done'];
 var COLS = { todo:'À faire', doing:'En cours', done:'Terminé' };
 var LABELS = { inventaire:'Inventaire', comptabilite:'Comptabilité', dispatch:'Dispatch', fournisseur:'Fournisseur' };
+var RESPONSABLES = ['Simon', 'Adjointe 1', 'Adjointe 2'];
+var RECURRENCES = { aucune:'Aucune', mensuelle:'Mensuelle', trimestrielle:'Aux 3 mois', annuelle:'Annuelle' };
+var RECUR_MOIS = { mensuelle:1, trimestrielle:3, annuelle:12 };
 var tasks = (function(){ var a = savedArray('tasks'); return a ? a : [
-  { id:'t1', col:'todo',  label:'fournisseur',  t:'Commander 40 pneus d\u2019hiver 17 po (fournisseur)',        due:'7 octobre' },
-  { id:'t2', col:'todo',  label:'inventaire',   t:'Relever les compteurs d\u2019inventaire',             due:'8 octobre' },
-  { id:'t3', col:'todo',  label:'dispatch',     t:'Documenter le script de dispatch (version 2)',        due:'10 octobre' },
-  { id:'t4', col:'doing', label:'comptabilite', t:'Concilier les factures de septembre',                due:'6 octobre' },
-  { id:'t5', col:'doing', label:'dispatch',     t:'Planifier l\u2019horaire de livraison de samedi',     due:'5 octobre' },
-  { id:'t6', col:'done',  label:'comptabilite', t:'Payer la facture d\u2019électricité',                 due:'1er octobre' },
-  { id:'t7', col:'done',  label:'fournisseur',  t:'Vérifier les retours sous garantie',                  due:'30 septembre' }
+  { id:'t1', col:'doing', label:'comptabilite', t:"Facture impayée — Client Demoservice : vérifier l'état de compte", due:'15 octobre', qui:'Simon', recur:'aucune', notes:[
+    { d:'5 août 2026', by:'Simon', txt:"État de compte analysé : 2 340 $ impayés depuis 45 jours. Résumé joint au dossier." },
+    { d:'20 août 2026', by:'Adjointe 1', txt:"Appelé le client : il dit que ça sera réglé en septembre." },
+    { d:'15 sept. 2026', by:'Adjointe 1', txt:"Rappelé, pas de retour d'appel. À suivre." },
+    { d:'2 oct. 2026', by:'Simon', txt:"Toujours impayé. Prochaine étape : mise en demeure ?" }
+  ]},
+  { id:'t2', col:'todo', label:'inventaire', t:"Relever les compteurs d'inventaire", due:'8 octobre', qui:'Adjointe 2', recur:'mensuelle', notes:[] },
+  { id:'t3', col:'todo', label:'comptabilite', t:"Conciliation trimestrielle — Compagnie B", due:'31 octobre', qui:'Simon', recur:'trimestrielle', notes:[] },
+  { id:'t4', col:'todo', label:'dispatch', t:'Documenter le script de dispatch (version 2)', due:'10 octobre', qui:'Simon', recur:'aucune', notes:[] },
+  { id:'t5', col:'doing', label:'fournisseur', t:"Commander 40 pneus d\u2019hiver 17 po", due:'7 octobre', qui:'Adjointe 1', recur:'aucune', notes:[
+    { d:'1er oct. 2026', by:'Adjointe 1', txt:"Demande de prix envoyée au fournisseur, en attente de réponse." }
+  ]},
+  { id:'t6', col:'done', label:'comptabilite', t:"Payer la facture d\u2019électricité", due:'1er octobre', qui:'Simon', recur:'mensuelle', notes:[] },
+  { id:'t7', col:'todo', label:'comptabilite', t:"Fermeture d'année — Compagnie A : pièces justificatives", due:'30 novembre', qui:'Simon', recur:'annuelle', notes:[] }
 ]; })();
 var newTaskN = (SAVED && typeof SAVED.newTaskN === 'number') ? SAVED.newTaskN : 0;
+var taskSearch = '', taskFiltreQui = '';
 
+function taskById(id){ return tasks.filter(function(t){ return t.id === id; })[0]; }
+function taskQui(t){ return RESPONSABLES.indexOf(t.qui) >= 0 ? t.qui : 'Simon'; }
+function taskRecur(t){ return RECURRENCES[t.recur] ? t.recur : 'aucune'; }
+function taskNotes(t){ if(!Array.isArray(t.notes)) t.notes = []; return t.notes; }
+function saveTasks(){ store.save(); }
+
+function taskMatch(t){
+  if(taskFiltreQui && taskQui(t) !== taskFiltreQui) return false;
+  if(!taskSearch) return true;
+  var q = taskSearch.toLowerCase();
+  var hay = (t.t + ' ' + (t.due || '') + ' ' + taskQui(t) + ' ' +
+    taskNotes(t).map(function(n){ return n.by + ' ' + n.txt; }).join(' ')).toLowerCase();
+  return hay.indexOf(q) >= 0;
+}
+function dateFr(d){
+  var noms = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  return d.getDate() + ' ' + noms[d.getMonth()] + ' ' + d.getFullYear();
+}
+function prochaineEcheance(recur){
+  var m = RECUR_MOIS[recur] || 0;
+  if(!m) return '';
+  var d = new Date(); d.setMonth(d.getMonth() + m);
+  return dateFr(d);
+}
 function moveTask(id, dir){
-  var task = tasks.filter(function(t){ return t.id === id; })[0];
+  var task = taskById(id);
   if(!task) return;
   var i = COL_ORDER.indexOf(task.col);
   var j = i + dir;
   if(j < 0 || j >= COL_ORDER.length) return;
   task.col = COL_ORDER[j];
-  renderBoard();
+  if(task.col === 'done' && taskRecur(task) !== 'aucune'){
+    newTaskN++;
+    tasks.push({ id:'tn' + newTaskN, col:'todo', label:task.label, t:task.t,
+      due:prochaineEcheance(taskRecur(task)), qui:taskQui(task), recur:taskRecur(task), notes:[] });
+    toast('Tâche récurrente : la prochaine échéance a été créée dans « À faire ».');
+  }
+  renderBoard(); saveTasks();
 }
 function renderBoard(){
   var html = '';
   COL_ORDER.forEach(function(col, ci){
-    var list = tasks.filter(function(t){ return t.col === col; });
+    var list = tasks.filter(function(t){ return t.col === col && taskMatch(t); });
+    var total = tasks.filter(function(t){ return t.col === col; }).length;
     html += '<div class="column' + (col === 'done' ? ' donecol' : '') + '">' +
-            '<div class="column-head"><span>' + COLS[col] + '</span><span class="column-count">' + list.length + '</span></div>';
+      '<div class="column-head"><span>' + COLS[col] + '</span><span class="column-count">' +
+      list.length + (list.length !== total ? ' / ' + total : '') + '</span></div>';
     list.forEach(function(t){
       var left = ci > 0, right = ci < COL_ORDER.length - 1;
+      var nNotes = taskNotes(t).length, recur = taskRecur(t);
       html += '<div class="tcard" data-card="' + t.id + '"><div class="t">' + esc(t.t) + '</div>' +
-              '<div class="meta"><button type="button" class="label lbl-' + t.label + '" title="Cliquez pour changer d\u2019étiquette" aria-label="Étiquette ' + LABELS[t.label] + ' \u2014 cliquez pour la changer">' + LABELS[t.label] + '</button>' +
-              '<span class="due">' + esc(t.due) + '</span></div>' +
-              '<div class="moves">' +
-              '<button type="button" class="move-btn" data-id="' + t.id + '" data-dir="-1" ' + (left ? '' : 'disabled') + ' aria-label="Déplacer vers la gauche">←</button>' +
-              '<button type="button" class="move-btn" data-id="' + t.id + '" data-dir="1" ' + (right ? '' : 'disabled') + ' aria-label="Déplacer vers la droite">→</button>' +
-              '<button type="button" class="move-btn" data-id="' + t.id + '" data-task-act="edit" aria-label="Modifier le titre">✎</button>' +
-              '<button type="button" class="move-btn del" data-id="' + t.id + '" data-task-act="del" aria-label="Supprimer la tâche">×</button>' +
-              '</div></div>';
+        '<div class="meta"><button type="button" class="label lbl-' + t.label + '" title="Cliquez pour changer d\u2019étiquette" aria-label="Étiquette ' + LABELS[t.label] + ' : cliquez pour la changer">' + LABELS[t.label] + '</button>' +
+        '<span class="due">' + esc(t.due || '') + '</span></div>' +
+        '<div class="meta2"><span class="qui-badge">' + esc(taskQui(t)) + '</span>' +
+        (recur !== 'aucune' ? '<span class="recur-badge" title="Tâche récurrente : se recrée automatiquement">🔁 ' + RECURRENCES[recur] + '</span>' : '') +
+        (nNotes ? '<span class="notes-badge" title="Notes de suivi">💬 ' + nNotes + '</span>' : '') + '</div>' +
+        '<div class="moves">' +
+        '<button type="button" class="move-btn" data-id="' + t.id + '" data-dir="-1" ' + (left ? '' : 'disabled') + ' aria-label="Déplacer vers la gauche">←</button>' +
+        '<button type="button" class="move-btn" data-id="' + t.id + '" data-dir="1" ' + (right ? '' : 'disabled') + ' aria-label="Déplacer vers la droite">→</button>' +
+        '<button type="button" class="move-btn" data-id="' + t.id + '" data-task-act="detail" aria-label="Voir le détail et le journal de suivi">🔍</button>' +
+        '<button type="button" class="move-btn" data-id="' + t.id + '" data-task-act="edit" aria-label="Modifier le titre">✎</button>' +
+        '<button type="button" class="move-btn del" data-id="' + t.id + '" data-task-act="del" aria-label="Supprimer la tâche">×</button>' +
+        '</div></div>';
     });
-    if(col === 'todo'){
-      html += '<div class="add-task"><input type="text" id="new-task" placeholder="Nouvelle tâche…" maxlength="90" aria-label="Nouvelle tâche" />' +
-              '<button type="button" class="btn btn-secondary" id="btn-add-task">Ajouter</button></div>';
-    }
     html += '</div>';
   });
   var board = $('board');
@@ -3044,37 +3274,78 @@ function renderBoard(){
       var act = btn.getAttribute('data-task-act');
       if(act === 'del'){ deleteTask(id); return; }
       if(act === 'edit'){ openTaskEdit(id); return; }
+      if(act === 'detail'){ openTaskDetail(id); return; }
       moveTask(id, parseInt(btn.getAttribute('data-dir'), 10));
     });
   });
-  var addBtn = $('btn-add-task');
-  if(addBtn) addBtn.addEventListener('click', addTask);
-  var addInput = $('new-task');
-  if(addInput) addInput.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); addTask(); } });
 }
-function addTask(){
-  var input = $('new-task');
-  if(!input) return;
-  var txt = input.value.trim();
-  if(!txt){ input.focus(); return; }
+function addTaskFromForm(){
+  var titre = $('nt-titre');
+  var txt = titre.value.trim();
+  if(!txt){ titre.focus(); return; }
   newTaskN++;
-  tasks.push({ id:'tn' + newTaskN, col:'todo', label:'dispatch', t:txt, due:'à planifier' });
-  renderBoard();
+  tasks.push({ id:'tn' + newTaskN, col:'todo', label:$('nt-label').value, t:txt,
+    due:$('nt-due').value.trim() || 'à planifier', qui:$('nt-qui').value, recur:$('nt-recur').value, notes:[] });
+  titre.value = ''; $('nt-due').value = '';
+  renderBoard(); saveTasks(); toast('Tâche ajoutée.');
 }
 function deleteTask(id){
   var old = tasks.length;
   tasks = tasks.filter(function(t){ return t.id !== id; });
   if(tasks.length === old) return;
-  renderBoard();
+  renderBoard(); saveTasks();
   if(session && session.role === 'gestionnaire') renderGmTiles();
   toast('Tâche supprimée.');
 }
 function cycleLabel(id){
-  var task = tasks.filter(function(t){ return t.id === id; })[0];
+  var task = taskById(id);
   if(!task) return;
   var keys = Object.keys(LABELS);
   task.label = keys[(keys.indexOf(task.label) + 1) % keys.length];
-  renderBoard();
+  renderBoard(); saveTasks();
+}
+function openTaskDetail(id){
+  var t = taskById(id); if(!t) return;
+  $('modal-title').textContent = 'Suivi de la tâche';
+  var notes = taskNotes(t);
+  var h = '<p class="td-titre">' + esc(t.t) + '</p>';
+  h += '<div class="field-row">' +
+    '<div class="field"><label for="td-qui">Responsable</label><select id="td-qui">' +
+    RESPONSABLES.map(function(r){ return '<option' + (taskQui(t) === r ? ' selected' : '') + '>' + r + '</option>'; }).join('') + '</select></div>' +
+    '<div class="field"><label for="td-recur">Récurrence</label><select id="td-recur">' +
+    Object.keys(RECURRENCES).map(function(k){ return '<option value="' + k + '"' + (taskRecur(t) === k ? ' selected' : '') + '>' + RECURRENCES[k] + '</option>'; }).join('') + '</select></div>' +
+    '</div>';
+  h += '<div class="field-row" style="margin-top:.6rem;">' +
+    '<div class="field"><label for="td-due">Échéance</label><input id="td-due" type="text" maxlength="40" value="' + esc(t.due || '') + '"></div>' +
+    '<div class="field"><label for="td-label">Étiquette</label><select id="td-label">' +
+    Object.keys(LABELS).map(function(k){ return '<option value="' + k + '"' + (t.label === k ? ' selected' : '') + '>' + LABELS[k] + '</option>'; }).join('') + '</select></div>' +
+    '</div>';
+  h += '<h4 class="td-journal-titre">Journal de suivi — qui a fait quoi, quand</h4>';
+  h += '<div class="td-journal">' + (notes.length ? notes.map(function(n){
+    return '<div class="td-note"><div class="td-note-head"><strong>' + esc(n.by) + '</strong><span>' + esc(n.d) + '</span></div><div>' + esc(n.txt) + '</div></div>';
+  }).join('') : '<p class="td-empty">Aucun suivi noté pour l\u2019instant.</p>') + '</div>';
+  h += '<div class="td-add"><div class="field-row">' +
+    '<div class="field"><label for="td-newby">Auteur du suivi</label><select id="td-newby">' +
+    RESPONSABLES.map(function(r){ return '<option>' + r + '</option>'; }).join('') + '</select></div>' +
+    '<div class="field"><label for="td-newtxt">Qu\u2019est-ce qui a été fait ?</label><input id="td-newtxt" type="text" maxlength="200" placeholder="ex. Appelé le client, il paiera le mois prochain" autocomplete="off"></div>' +
+    '</div><p style="margin-top:.6rem;"><button type="button" class="btn btn-secondary btn-sm" id="td-addnote">Ajouter au journal</button></p></div>';
+  $('modal-body').innerHTML = h;
+  $('modal').hidden = false;
+  __modalSave = function(){
+    t.qui = $('td-qui').value;
+    t.recur = $('td-recur').value;
+    t.due = $('td-due').value.trim();
+    t.label = $('td-label').value;
+    renderBoard(); saveTasks(); closeModal(); toast('Tâche mise à jour.');
+  };
+  $('td-addnote').addEventListener('click', function(){
+    var txt = $('td-newtxt').value.trim();
+    if(!txt){ $('td-newtxt').focus(); return; }
+    taskNotes(t).push({ d:dateFr(new Date()), by:$('td-newby').value, txt:txt });
+    saveTasks();
+    openTaskDetail(id);
+    toast('Suivi ajouté au journal.');
+  });
 }
 function openTaskEdit(id){
   var tEl = $('board').querySelector('.tcard[data-card="' + id + '"] .t');
@@ -3084,7 +3355,7 @@ function editTaskTitle(tEl){
   var card = tEl.closest('.tcard');
   if(!card || tEl.querySelector('.task-edit')) return;
   var id = card.getAttribute('data-card');
-  var task = tasks.filter(function(t){ return t.id === id; })[0];
+  var task = taskById(id);
   if(!task) return;
   tEl.textContent = '';
   var inp = document.createElement('input');
@@ -3096,7 +3367,7 @@ function editTaskTitle(tEl){
   function commit(save){
     if(done) return; done = true;
     if(save){ var v = inp.value.trim(); if(v) task.t = v; }
-    renderBoard();
+    renderBoard(); saveTasks();
   }
   inp.addEventListener('blur', function(){ commit(true); });
   inp.addEventListener('click', function(ev){ ev.stopPropagation(); });
@@ -3106,6 +3377,16 @@ function editTaskTitle(tEl){
   });
 }
 renderBoard();
+/* Recherche, filtre par responsable et ajout via le formulaire */
+(function(){
+  var s = $('task-search'), f = $('task-filtre-qui');
+  if(s) s.addEventListener('input', function(){ taskSearch = s.value.trim(); renderBoard(); });
+  if(f) f.addEventListener('change', function(){ taskFiltreQui = f.value; renderBoard(); });
+  var add = $('btn-nt-add');
+  if(add) add.addEventListener('click', addTaskFromForm);
+  var titre = $('nt-titre');
+  if(titre) titre.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); addTaskFromForm(); } });
+})();
 /* Cliquer sur une étiquette la fait changer (clic natif du bouton, y compris clavier) */
 (function(){
   var board = $('board');
@@ -3116,6 +3397,118 @@ renderBoard();
     if(!card) return;
     cycleLabel(card.getAttribute('data-card'));
   });
+})();
+
+/* ================= INVENTAIRE ================= */
+var INV = (function(){ var a = savedArray('inv'); return a ? a : [
+  { id:'i1', sku:'H24175', desc:"Pneu d\u2019hiver 175/65R14", cat:'Hiver', marque:'NordTrek', emp:'A-01', qte:24, seuil:8, cout:89.99 },
+  { id:'i2', sku:'H24205', desc:"Pneu d\u2019hiver 205/55R16", cat:'Hiver', marque:'NordTrek', emp:'A-02', qte:6, seuil:8, cout:119.99 },
+  { id:'i3', sku:'E34195', desc:"Pneu d\u2019\u00e9t\u00e9 195/65R15", cat:'\u00c9t\u00e9', marque:'RoutePlus', emp:'B-01', qte:32, seuil:10, cout:74.50 },
+  { id:'i4', sku:'E34225', desc:"Pneu d\u2019\u00e9t\u00e9 225/45R17", cat:'\u00c9t\u00e9', marque:'RoutePlus', emp:'B-02', qte:3, seuil:6, cout:139.99 },
+  { id:'i5', sku:'Q50215', desc:"Pneu 4 saisons 215/60R16", cat:'4 saisons', marque:'TourMax', emp:'C-01', qte:18, seuil:8, cout:99.99 },
+  { id:'i6', sku:'H24315', desc:"Pneu d\u2019hiver 315/35R20 (VUS)", cat:'Hiver', marque:'AlpinPro', emp:'A-03', qte:12, seuil:4, cout:249.99 }
+]; })();
+var invN = (SAVED && typeof SAVED.invN === 'number') ? SAVED.invN : 0;
+var invSearch = '', invCat = '', invAlerte = '';
+
+function invById(id){ return INV.filter(function(a){ return a.id === id; })[0]; }
+function invBas(a){ return a.qte <= a.seuil; }
+function saveInv(){ store.save(); }
+function invMatch(a){
+  if(invCat && a.cat !== invCat) return false;
+  if(invAlerte === 'bas' && !invBas(a)) return false;
+  if(!invSearch) return true;
+  var q = invSearch.toLowerCase();
+  return (a.sku + ' ' + a.desc + ' ' + a.marque + ' ' + a.emp).toLowerCase().indexOf(q) >= 0;
+}
+function renderInv(){
+  var stats = $('inv-stats');
+  if(stats){
+    var unites = 0, valeur = 0, bas = 0;
+    INV.forEach(function(a){ unites += a.qte; valeur += a.qte * a.cout; if(invBas(a)) bas++; });
+    stats.innerHTML =
+      '<div class="stat"><span class="v">' + fmtMoney(valeur) + '</span><span class="l">Valeur du stock (co\u00fbtant)</span></div>' +
+      '<div class="stat"><span class="v">' + unites + '</span><span class="l">Pneus en stock</span></div>' +
+      '<div class="stat"><span class="v">' + bas + '</span><span class="l">Sous le seuil d\u2019alerte</span></div>';
+  }
+  var body = $('inv-body');
+  if(!body) return;
+  var h = '';
+  INV.filter(invMatch).forEach(function(a){
+    var low = invBas(a);
+    h += '<tr' + (low ? ' class="inv-low"' : '') + '>' +
+      '<td><strong>' + esc(a.sku) + '</strong><br><span class="inv-desc">' + esc(a.desc) + '</span>' +
+      (low ? '<br><span class="inv-alert">\u26a0 sous le seuil</span>' : '') + '</td>' +
+      '<td>' + esc(a.cat) + '</td>' +
+      '<td>' + esc(a.marque) + '</td>' +
+      '<td>' + esc(a.emp) + '</td>' +
+      '<td><span class="inv-qte"><button type="button" class="qty-btn" data-inv-moins="' + a.id + '" aria-label="Retirer 1">\u2212</button>' +
+      '<strong>' + a.qte + '</strong>' +
+      '<button type="button" class="qty-btn" data-inv-plus="' + a.id + '" aria-label="Ajouter 1">+</button></span></td>' +
+      '<td>' + a.seuil + '</td>' +
+      '<td>' + fmtMoney(a.cout) + '</td>' +
+      '<td>' + fmtMoney(a.qte * a.cout) + '</td>' +
+      '<td><button type="button" class="move-btn del" data-inv-del="' + a.id + '" aria-label="Supprimer l\u2019article">\u00d7</button></td>' +
+      '</tr>';
+  });
+  body.innerHTML = h || '<tr><td colspan="9" class="td-empty">Aucun article trouv\u00e9.</td></tr>';
+  body.querySelectorAll('[data-inv-moins]').forEach(function(b){
+    b.addEventListener('click', function(){ invAdjust(b.getAttribute('data-inv-moins'), -1); });
+  });
+  body.querySelectorAll('[data-inv-plus]').forEach(function(b){
+    b.addEventListener('click', function(){ invAdjust(b.getAttribute('data-inv-plus'), 1); });
+  });
+  body.querySelectorAll('[data-inv-del]').forEach(function(b){
+    b.addEventListener('click', function(){ invDelete(b.getAttribute('data-inv-del')); });
+  });
+}
+function invAdjust(id, d){
+  var a = invById(id); if(!a) return;
+  a.qte = Math.max(0, a.qte + d);
+  renderInv(); saveInv();
+}
+function invDelete(id){
+  var old = INV.length;
+  INV = INV.filter(function(a){ return a.id !== id; });
+  if(INV.length === old) return;
+  renderInv(); saveInv(); toast('Article supprim\u00e9 de l\u2019inventaire.');
+}
+function invAdd(){
+  var skuEl = $('ni-sku'), descEl = $('ni-desc');
+  var sku = skuEl.value.trim(), desc = descEl.value.trim();
+  if(!sku || !desc){ toast('Indiquez au moins le SKU et la description.'); (sku ? descEl : skuEl).focus(); return; }
+  invN++;
+  INV.push({ id:'in' + invN, sku:sku, desc:desc, cat:$('ni-cat').value,
+    marque:$('ni-marque').value.trim() || '\u2014', emp:$('ni-emp').value.trim() || '\u2014',
+    qte:Math.max(0, parseInt($('ni-qte').value, 10) || 0),
+    seuil:Math.max(0, parseInt($('ni-seuil').value, 10) || 0),
+    cout:Math.max(0, parseFloat($('ni-cout').value) || 0) });
+  ['ni-sku','ni-desc','ni-marque','ni-emp'].forEach(function(id){ $(id).value = ''; });
+  $('ni-qte').value = '0';
+  renderInv(); saveInv(); toast('Article ajout\u00e9 \u00e0 l\u2019inventaire.');
+}
+function invCsv(){
+  var rows = [['SKU','Description','Cat\u00e9gorie','Marque','Emplacement','Quantit\u00e9','Seuil','Co\u00fbt unitaire','Valeur']];
+  INV.forEach(function(a){
+    rows.push([a.sku, a.desc, a.cat, a.marque, a.emp, String(a.qte), String(a.seuil), a.cout.toFixed(2), (a.qte * a.cout).toFixed(2)]);
+  });
+  var csv = rows.map(function(r){ return r.map(function(c){ return '"' + String(c).replace(/"/g, '""') + '"'; }).join(';'); }).join('\r\n');
+  downloadBlob('inventaire.csv', csv);
+  toast('Inventaire export\u00e9 : inventaire.csv');
+}
+renderInv();
+/* Recherche, filtres, ajout et export */
+(function(){
+  var s = $('inv-search');
+  if(s) s.addEventListener('input', function(){ invSearch = s.value.trim(); renderInv(); });
+  var c = $('inv-filtre-cat');
+  if(c) c.addEventListener('change', function(){ invCat = c.value; renderInv(); });
+  var al = $('inv-filtre-alerte');
+  if(al) al.addEventListener('change', function(){ invAlerte = al.value; renderInv(); });
+  var add = $('btn-ni-add');
+  if(add) add.addEventListener('click', invAdd);
+  var csv = $('btn-inv-csv');
+  if(csv) csv.addEventListener('click', invCsv);
 })();
 
 /* ================= EXCEL : 3 états de compte ================= */
@@ -3846,6 +4239,7 @@ function renderGmTiles(){
   var enCours = courses.filter(function(c){ return c.statut === 'encours'; }).length;
   var todo = tasks.filter(function(t){ return t.col !== 'done'; }).length;
   var ana = STATEMENTS.filter(function(s){ return s.analyzed; }).length;
+  var invBasN = (typeof INV !== 'undefined') ? INV.filter(function(a){ return a.qte <= a.seuil; }).length : 0;
   function tile(href, path, t, s, go){
     return '<a class="tile" href="' + href + '"><span class="t"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="' + path + '"/></svg>' + esc(t) + '</span><small>' + esc(s) + '</small><span class="go">' + esc(go) + '</span></a>';
   }
@@ -3854,7 +4248,8 @@ function renderGmTiles(){
   var restTiles =
     tile('#reception-gestion', 'M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7a2 2 0 0 1 1.7 2z', 'Commandes captées', TRANSFER_LOG.length + ' commande' + pl(TRANSFER_LOG.length) + ' captée' + pl(TRANSFER_LOG.length), 'Régler les transferts →') +
     tile('#rappels', 'M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9', 'Rappels', 'Vérifications toutes les 20 min · ' + remDone + ' effectuée' + pl(remDone) + ' cette visite', 'Voir les rappels →') +
-    tile('#trello', 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM9 9H7v6h2zM15 12.5h-2V15h2z', 'Trello', todo + ' tâche' + pl(todo) + ' en attente ou en cours', 'Voir le tableau →') +
+    tile('#trello', 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM9 9H7v6h2zM15 12.5h-2V15h2z', 'Tâches', todo + ' tâche' + pl(todo) + ' en attente ou en cours', 'Voir le tableau →') +
+    tile('#inventaire', 'M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8', 'Inventaire', (typeof INV !== 'undefined' ? INV.length : 0) + ' article' + pl(typeof INV !== 'undefined' ? INV.length : 0) + ' · ' + invBasN + ' sous le seuil', 'Voir l\u2019inventaire →') +
     tile('#excel', 'M7 20V10M12.5 20V4M18 20v-7', 'Excel', ana + ' relevé' + pl(ana) + ' analysé' + pl(ana), 'Voir l\u2019analyse →') +
     tile('#documents', 'M6 2h12l6 6v14H6zM14 2v6h6', 'Documents', DOCS.length + ' document' + pl(DOCS.length) + ' classé' + pl(DOCS.length), 'Voir les documents →');
   $('gm-tiles').innerHTML = '<div class="tile-grid">' + dispatchTile + '</div>' + '<details class="tiles-more"><summary>Autres modules</summary><div class="tile-grid">' + restTiles + '</div></details>';
