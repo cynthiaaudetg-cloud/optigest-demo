@@ -34,6 +34,14 @@
   .role-btn.active{ background:var(--brand); border-color:var(--brand); color:var(--brand-ink); }
   .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:.7rem; margin:0 0 1rem; }
   @media (max-width:560px){ .stats{ grid-template-columns:1fr 1fr; } }
+  .alert-banner{ background:#fef3c7; border:1px solid #f59e0b; color:#92400e; border-radius:10px; padding:.7rem 1rem; margin:0 0 1rem; font-size:.92rem; }
+  @media (prefers-color-scheme: dark){ .alert-banner{ background:#3a2a10; border-color:#b45309; color:#fde68a; } }
+  .lbl-Urgent{ background:#fee2e2; color:#b91c1c; }
+  @media (prefers-color-scheme: dark){ .lbl-Urgent{ background:#5b1a1a; color:#fecaca; } }
+  .team-row{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:.8rem; }
+  .team-chip{ display:inline-flex; align-items:center; gap:.35rem; font-size:.82rem; font-weight:700; background:var(--surface2); border:1px solid var(--line); border-radius:999px; padding:.25rem .35rem .25rem .7rem; }
+  .team-x{ border:0; background:none; cursor:pointer; font-size:1rem; line-height:1; color:var(--muted); padding:.1rem .3rem; }
+  .team-chip.active-chip{ background:var(--brand); color:var(--brand-ink); border-color:var(--brand); }
   .stat{ background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:.6rem .8rem; text-align:center; }
   .stat .v{ display:block; font-size:1.4rem; font-weight:700; }
   .stat .l{ display:block; font-size:.75rem; color:var(--muted); margin-top:.15rem; }
@@ -107,13 +115,11 @@
     chaque personne aurait son compte, les suivis arriveraient en temps réel et chacun recevrait des notifications.
   </div>
 
-  <div class="roles" role="group" aria-label="Voir comme">
+  <div class="roles" role="group" aria-label="Voir comme" id="st-roles">
     <span class="lbl">Voir comme :</span>
-    <button type="button" class="role-btn" data-role="Simon">Simon</button>
-    <button type="button" class="role-btn" data-role="Adjointe 1">Adjointe 1</button>
-    <button type="button" class="role-btn" data-role="Adjointe 2">Adjointe 2</button>
-    <button type="button" class="role-btn" data-role="Boss">Boss</button>
   </div>
+
+  <div class="alert-banner" id="st-alerts" hidden></div>
 
   <div class="stats" id="st-stats" aria-live="polite"></div>
 
@@ -130,6 +136,10 @@
           <option value="miennes">Mes tâches seulement</option>
         </select>
       </div>
+    </div>
+    <div style="margin-top:.6rem;">
+      <span class="lbl">Par étiquette :</span>
+      <div class="team-row" id="st-label-chips" style="margin-top:.4rem;"></div>
     </div>
   </div>
 
@@ -167,6 +177,26 @@
       </div>
     </div>
     <p style="margin-top:.8rem;"><button type="button" class="btn btn-primary" id="st-add">Ajouter la tâche</button></p>
+  </div>
+
+  <div class="card">
+    <h3>Équipe : adjointes et boss</h3>
+    <p style="font-size:.8rem;color:var(--muted);margin-top:-.4rem;">Ajoutez des adjointes ou des boss au besoin. Ils apparaîtront comme responsables et comme boutons « Voir comme ».</p>
+    <div class="team-row" id="st-team-list"></div>
+    <div class="field-row">
+      <div class="field">
+        <label for="st-team-name">Nom</label>
+        <input type="text" id="st-team-name" placeholder="ex. Adjointe 3" maxlength="40" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="st-team-role">Rôle</label>
+        <select id="st-team-role">
+          <option value="adjointe">Adjointe</option>
+          <option value="boss">Boss</option>
+        </select>
+      </div>
+    </div>
+    <p style="margin-top:.8rem;"><button type="button" class="btn btn-secondary" id="st-team-add">Ajouter à l'équipe</button></p>
   </div>
 
   <div class="card">
@@ -215,10 +245,25 @@ function toast(msg){
 
 var COLS = ['todo','doing','done'];
 var COL_NAMES = { todo:'À faire', doing:'En cours', done:'Terminé' };
-var LABELS = { 'Comptabilité':'Comptabilité', 'Hiver':'Hiver', 'Été':'Été', 'Divers':'Divers' };
+var LABELS = { 'Comptabilité':'Comptabilité', 'Hiver':'Hiver', 'Été':'Été', 'Divers':'Divers', 'Urgent':'Urgent' };
 var RECUR = { aucune:'Aucune', mensuelle:'Mensuelle', trimestrielle:'Aux 3 mois', annuelle:'Annuelle' };
 var RECUR_MOIS = { mensuelle:1, trimestrielle:3, annuelle:12 };
-var ROLES = ['Simon','Adjointe 1','Adjointe 2','Boss'];
+/* Équipe configurable : adjointes et boss, modifiable au besoin */
+function loadTeam(){
+  try{
+    var raw = localStorage.getItem('suivi-taches-team-v1');
+    if(raw){ var a = JSON.parse(raw); if(Array.isArray(a) && a.length) return a.filter(function(m){ return m && m.name; }); }
+  }catch(e){}
+  return [
+    { name:'Adjointe 1', role:'adjointe' },
+    { name:'Adjointe 2', role:'adjointe' },
+    { name:'Boss', role:'boss' }
+  ];
+}
+var TEAM = loadTeam();
+function saveTeam(){ try{ localStorage.setItem('suivi-taches-team-v1', JSON.stringify(TEAM)); }catch(e){} }
+function roles(){ return ['Simon'].concat(TEAM.map(function(m){ return m.name; })); }
+function isBoss(name){ return TEAM.some(function(m){ return m.name === name && m.role === 'boss'; }); }
 
 var saved = load();
 var tasks = (saved && Array.isArray(saved.tasks)) ? saved.tasks : [
@@ -236,15 +281,16 @@ var tasks = (saved && Array.isArray(saved.tasks)) ? saved.tasks : [
   { id:'t5', col:'todo', label:'Comptabilité', t:"Fermeture d'année — Compagnie A : pièces justificatives", due:'30 novembre', qui:'Simon', recur:'annuelle', notes:[] }
 ];
 var taskN = (saved && typeof saved.n === 'number') ? saved.n : 0;
-var currentRole = (saved && ROLES.indexOf(saved.role) >= 0) ? saved.role : 'Simon';
-var search = '', filtre = 'toutes';
+var currentRole = (saved && roles().indexOf(saved.role) >= 0) ? saved.role : 'Simon';
+var search = '', filtre = 'toutes', filtreLabel = '';
 
 function byId(id){ return tasks.filter(function(t){ return t.id === id; })[0]; }
-function qui(t){ return ROLES.indexOf(t.qui) >= 0 && t.qui !== 'Boss' ? t.qui : 'Simon'; }
+function qui(t){ return roles().indexOf(t.qui) >= 0 && !isBoss(t.qui) ? t.qui : 'Simon'; }
 function recur(t){ return RECUR[t.recur] ? t.recur : 'aucune'; }
 function notes(t){ if(!Array.isArray(t.notes)) t.notes = []; return t.notes; }
 function match(t){
-  if(filtre === 'miennes' && currentRole !== 'Boss' && qui(t) !== currentRole) return false;
+  if(filtre === 'miennes' && !isBoss(currentRole) && qui(t) !== currentRole) return false;
+  if(filtreLabel && t.label !== filtreLabel) return false;
   if(!search) return true;
   var q = search.toLowerCase();
   var hay = (t.t + ' ' + (t.due || '') + ' ' + qui(t) + ' ' +
@@ -263,17 +309,37 @@ function prochaineEcheance(r){
 }
 
 function renderRoles(){
-  document.querySelectorAll('.role-btn').forEach(function(b){
-    b.classList.toggle('active', b.getAttribute('data-role') === currentRole);
+  var wrap = $('st-roles');
+  var html = '<span class="lbl">Voir comme :</span>';
+  roles().forEach(function(r){
+    html += '<button type="button" class="role-btn' + (r === currentRole ? ' active' : '') + '" data-role="' + esc(r) + '">' + esc(r) + (isBoss(r) ? ' 👔' : '') + '</button>';
   });
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.role-btn').forEach(function(b){
+    b.addEventListener('click', function(){
+      currentRole = b.getAttribute('data-role');
+      renderAll(); save();
+      toast('Vue : ' + currentRole + (isBoss(currentRole) ? ' (voit tout)' : ''));
+    });
+  });
+}
+function renderAlerts(){
+  var el = $('st-alerts');
+  var n = tasks.filter(function(t){ return t.col !== 'done' && t.label === 'Urgent'; }).length;
+  if(n){
+    el.hidden = false;
+    el.innerHTML = '🔔 <strong>' + n + ' tâche' + (n > 1 ? 's' : '') + ' urgente' + (n > 1 ? 's' : '') + '</strong> à traiter en priorité.';
+  } else {
+    el.hidden = true;
+  }
 }
 function renderStats(){
   var actives = tasks.filter(function(t){ return t.col !== 'done'; }).length;
-  var miennes = tasks.filter(function(t){ return t.col !== 'done' && (currentRole === 'Boss' || qui(t) === currentRole); }).length;
+  var miennes = tasks.filter(function(t){ return t.col !== 'done' && (isBoss(currentRole) || qui(t) === currentRole); }).length;
   var suivis = tasks.reduce(function(n, t){ return n + notes(t).length; }, 0);
   $('st-stats').innerHTML =
     '<div class="stat"><span class="v">' + actives + '</span><span class="l">Tâches actives</span></div>' +
-    '<div class="stat"><span class="v">' + miennes + '</span><span class="l">' + (currentRole === 'Boss' ? 'Toutes (vue boss)' : 'Mes tâches') + '</span></div>' +
+    '<div class="stat"><span class="v">' + miennes + '</span><span class="l">' + (isBoss(currentRole) ? 'Toutes (vue boss)' : 'Mes tâches') + '</span></div>' +
     '<div class="stat"><span class="v">' + suivis + '</span><span class="l">Suivis écrits</span></div>';
 }
 function renderBoard(){
@@ -334,7 +400,48 @@ function renderFeed(){
       '<div>' + esc(n.txt) + '</div><div class="ft">' + esc(n.t) + '</div></div>';
   }).join('') || '<p class="td-empty">Aucun suivi pour l’instant.</p>';
 }
-function renderAll(){ renderRoles(); renderStats(); renderBoard(); renderFeed(); }
+function renderAll(){ renderRoles(); renderAlerts(); renderStats(); renderBoard(); renderFeed(); renderTeam(); renderLabelChips(); }
+
+function renderLabelChips(){
+  var wrap = $('st-label-chips');
+  if(!wrap) return;
+  var html = '<button type="button" class="team-chip' + (filtreLabel === '' ? ' active-chip' : '') + '" data-lf="">Toutes</button>';
+  Object.keys(LABELS).forEach(function(k){
+    html += '<button type="button" class="team-chip' + (filtreLabel === k ? ' active-chip' : '') + '" data-lf="' + esc(k) + '">' + esc(LABELS[k]) + '</button>';
+  });
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('[data-lf]').forEach(function(b){
+    b.addEventListener('click', function(){
+      filtreLabel = b.getAttribute('data-lf');
+      renderLabelChips(); renderBoard();
+    });
+  });
+}
+
+function renderTeam(){
+  var wrap = $('st-team-list');
+  if(!wrap) return;
+  wrap.innerHTML = TEAM.length ? TEAM.map(function(m, i){
+    return '<span class="team-chip">' + esc(m.name) +
+      ' <small style="opacity:.7;">(' + (m.role === 'boss' ? 'Boss' : 'Adjointe') + ')</small>' +
+      ' <button type="button" class="team-x" data-i="' + i + '" aria-label="Retirer">×</button></span>';
+  }).join('') : '<span style="font-size:.85rem;color:var(--muted);">Aucun membre.</span>';
+  wrap.querySelectorAll('.team-x').forEach(function(b){
+    b.addEventListener('click', function(){ removeMember(parseInt(b.getAttribute('data-i'), 10)); });
+  });
+  var qui = $('st-qui'), cur = qui.value;
+  qui.innerHTML = roles().filter(function(r){ return !isBoss(r); }).map(function(r){ return '<option>' + esc(r) + '</option>'; }).join('');
+  if(roles().indexOf(cur) >= 0 && !isBoss(cur)) qui.value = cur;
+}
+function removeMember(i){
+  var m = TEAM[i]; if(!m) return;
+  var used = tasks.filter(function(t){ return t.qui === m.name; }).length;
+  if(used){ toast('⚠ ' + m.name + ' a ' + used + ' tâche(s) : réassignez-les d\u2019abord.'); return; }
+  TEAM.splice(i, 1); saveTeam();
+  if(currentRole === m.name) currentRole = 'Simon';
+  renderAll(); save();
+  toast('✓ ' + m.name + ' retiré(e).');
+}
 
 function moveTask(id, dir){
   var t = byId(id); if(!t) return;
@@ -374,7 +481,7 @@ function openDetail(id){
   var h = '<p style="font-weight:700;margin:0 0 .8rem;">' + esc(t.t) + '</p>';
   h += '<div class="field-row">' +
     '<div class="field"><label for="dt-qui">Responsable</label><select id="dt-qui">' +
-    ['Simon','Adjointe 1','Adjointe 2'].map(function(r){ return '<option' + (qui(t) === r ? ' selected' : '') + '>' + r + '</option>'; }).join('') + '</select></div>' +
+    roles().filter(function(r){ return !isBoss(r); }).map(function(r){ return '<option' + (qui(t) === r ? ' selected' : '') + '>' + esc(r) + '</option>'; }).join('') + '</select></div>' +
     '<div class="field"><label for="dt-recur">Récurrence</label><select id="dt-recur">' +
     Object.keys(RECUR).map(function(k){ return '<option value="' + k + '"' + (recur(t) === k ? ' selected' : '') + '>' + RECUR[k] + '</option>'; }).join('') + '</select></div></div>';
   h += '<div class="field" style="margin-top:.6rem;"><label for="dt-due">Échéance</label>' +
@@ -383,7 +490,7 @@ function openDetail(id){
   h += '<div class="td-journal">' + (ns.length ? ns.map(function(n){
     return '<div class="td-note"><div class="td-note-head"><strong>' + esc(n.by) + '</strong><span>' + esc(n.d) + '</span></div><div>' + esc(n.txt) + '</div></div>';
   }).join('') : '<p class="td-empty">Aucun suivi noté pour l’instant.</p>') + '</div>';
-  h += '<div class="field"><label for="dt-txt">Ajouter un suivi (comme ' + esc(currentRole === 'Boss' ? 'Simon' : currentRole) + ')</label>' +
+  h += '<div class="field"><label for="dt-txt">Ajouter un suivi (comme ' + esc(isBoss(currentRole) ? 'Simon' : currentRole) + ')</label>' +
     '<input type="text" id="dt-txt" maxlength="200" placeholder="ex. Appelé le client, il paiera le mois prochain" autocomplete="off"></div>' +
     '<p><button type="button" class="btn btn-secondary btn-sm" id="dt-add">Ajouter au journal</button></p>';
   $('st-modal-body').innerHTML = h;
@@ -395,23 +502,26 @@ function openDetail(id){
   $('dt-add').addEventListener('click', function(){
     var txt = $('dt-txt').value.trim();
     if(!txt){ $('dt-txt').focus(); return; }
-    notes(t).push({ d:dateFr(new Date()), by:(currentRole === 'Boss' ? 'Simon' : currentRole), txt:txt, ts:Date.now() });
+    notes(t).push({ d:dateFr(new Date()), by:(isBoss(currentRole) ? 'Simon' : currentRole), txt:txt, ts:Date.now() });
     save(); openDetail(id); toast('Suivi ajouté.');
   });
 }
 function closeDetail(){ $('st-modal').hidden = true; detailSave = null; }
 
-document.querySelectorAll('.role-btn').forEach(function(b){
-  b.addEventListener('click', function(){
-    currentRole = b.getAttribute('data-role');
-    renderAll(); save();
-    toast('Vue : ' + currentRole);
-  });
-});
 $('st-search').addEventListener('input', function(){ search = $('st-search').value.trim(); renderBoard(); });
 $('st-filtre').addEventListener('change', function(){ filtre = $('st-filtre').value; renderAll(); });
 $('st-add').addEventListener('click', addTask);
 $('st-titre').addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); addTask(); } });
+$('st-team-add').addEventListener('click', function(){
+  var name = $('st-team-name').value.trim();
+  if(!name){ $('st-team-name').focus(); return; }
+  if(roles().indexOf(name) >= 0){ toast('⚠ Ce nom existe déjà.'); return; }
+  TEAM.push({ name:name, role:$('st-team-role').value });
+  saveTeam(); renderAll(); save();
+  $('st-team-name').value = '';
+  toast('✓ ' + name + ' ajouté(e) à l\u2019équipe.');
+});
+$('st-team-name').addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); $('st-team-add').click(); } });
 $('st-modal-save').addEventListener('click', function(){ if(detailSave) detailSave(); });
 $('st-modal-cancel').addEventListener('click', closeDetail);
 $('st-modal').addEventListener('click', function(e){ if(e.target === $('st-modal')) closeDetail(); });

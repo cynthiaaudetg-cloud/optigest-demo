@@ -401,6 +401,9 @@
   .chip-normal{ background:var(--surface3); color:var(--ink-soft); }
   .chip-urgent{ background:var(--danger); color:#fff; }
   .chip-secteur{ background:var(--brand-soft); color:var(--brand-deep); margin-left:.4rem; }
+  .chip-kind{ margin-left:.4rem; border:1px dashed var(--brand); color:var(--brand-deep); background:transparent; }
+  .chip-kind-fixe{ border-style:solid; background:var(--brand); color:#fff; }
+  .chip-kind-cueillette{ border-style:solid; background:var(--brand-soft); color:var(--brand-deep); }
   @media (prefers-color-scheme: dark){ .chip-secteur{ color:var(--brand); } }
   .chip-pending{ background:var(--warn-soft); color:var(--warn); }
   .chip-courriel{ background:#e3dcfb; color:#45307f; margin-left:.4rem; }
@@ -522,11 +525,15 @@
   .lbl-comptabilite{ background:#d1fae5; color:#065f46; }
   .lbl-dispatch{ background:#d6e4fd; color:#1d4ed8; }
   .lbl-fournisseur{ background:#e0e7ff; color:#3730a3; }
+  .lbl-urgent{ background:#fee2e2; color:#b91c1c; }
+  .alert-banner{ background:#fef3c7; border:1px solid #f59e0b; color:#92400e; border-radius:10px; padding:.7rem 1rem; margin-bottom:1rem; font-size:.92rem; }
   @media (prefers-color-scheme: dark){
     .lbl-inventaire{ background:#2b3448; color:#b9c5d8; }
     .lbl-comptabilite{ background:#134b33; color:#9fd9b8; }
     .lbl-dispatch{ background:#1f3c7a; color:#a9c4f5; }
     .lbl-fournisseur{ background:#2b2f63; color:#b3b9f5; }
+    .lbl-urgent{ background:#5b1a1a; color:#fecaca; }
+    .alert-banner{ background:#3a2a10; border-color:#b45309; color:#fde68a; }
   }
   .tcard .moves{ display:flex; gap:.4rem; margin-top:.6rem; }
   .tcard .meta2{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.45rem; align-items:center; }
@@ -1520,6 +1527,20 @@
       </div>
       <div class="tile-grid" id="gm-tiles"></div>
       <div class="card acc-panel">
+        <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4"/></svg>Mon entreprise</h3>
+        <p style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .8rem;">Le nom affiché aux acheteurs quand ils commandent. Laissez vide pour garder « votre entreprise ».</p>
+        <div class="field-row" style="align-items:end;">
+          <div class="field">
+            <label for="company-name">Nom de l'entreprise / du garage</label>
+            <input type="text" id="company-name" placeholder="ex. Central Pneu Mécanique" maxlength="60" autocomplete="off" />
+          </div>
+          <div class="field" style="max-width:180px;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-company-save">Enregistrer</button>
+          </div>
+        </div>
+        <p style="font-size:.85rem;margin:.5rem 0 0;" id="company-msg" aria-live="polite"></p>
+      </div>
+      <div class="card acc-panel">
         <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7.5" r="4"/><path d="M22 12v7M19 15.5h6"/></svg>Gérer les accès</h3>
 
         <div class="table-wrap"><table class="stack-table" id="acc-table">
@@ -1661,6 +1682,30 @@
                 </select>
               </div>
             </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="c-kind">Type de course</label>
+                <select id="c-kind">
+                  <option value="flexible">Flexible — le système décide quand</option>
+                  <option value="cueillette">Cueillette — être là à l'heure demandée</option>
+                  <option value="fixe">Fixe — départ à heure fixe</option>
+                </select>
+              </div>
+              <div class="field" id="c-heurefixe-wrap" hidden>
+                <label for="c-heurefixe">Heure de départ fixe</label>
+                <select id="c-heurefixe">
+                  <option value="480">8 h 00</option>
+                  <option value="540">9 h 00</option>
+                  <option value="600">10 h 00</option>
+                  <option value="660">11 h 00</option>
+                  <option value="720">12 h 00</option>
+                  <option value="780">13 h 00</option>
+                  <option value="840">14 h 00</option>
+                  <option value="900">15 h 00</option>
+                  <option value="960">16 h 00</option>
+                </select>
+              </div>
+            </div>
             <div class="field">
               <span class="field-label">Priorité</span>
               <div class="prio-group" role="radiogroup" aria-label="Priorité">
@@ -1685,7 +1730,8 @@
             <p>« Bonjour, pourriez-vous livrer 12 pneus 17 po à l'entreprise de démonstration, 520, rue Principale à Wendake, jeudi matin avant 11 h&nbsp;? Merci, S. Doyon »</p>
           </blockquote>
           <button type="button" class="btn btn-primary" id="btn-email">Simuler l'arrivée de ce courriel</button>
-          <p style="font-size:.82rem;color:var(--muted);margin:.6rem 0 0;">La lecture automatique des demandes reçues dans votre boîte, avec extraction de la course et ajout à l'horaire : fonction prévue, non incluse dans cette démo.</p>
+          <button type="button" class="btn btn-secondary" id="btn-stox" style="margin-left:.5rem;">Simuler : courriel STOX — commande prête</button>
+          <p style="font-size:.82rem;color:var(--muted);margin:.6rem 0 0;">La lecture automatique des demandes reçues dans votre boîte, avec extraction de la course et ajout à l'horaire : fonction prévue, non incluse dans cette démo. Règle STOX : plusieurs courriels « commande prête » reçus le même matin sont consolidés en <strong>une seule</strong> course de ramassage.</p>
         </div>
       </div>
 
@@ -1864,7 +1910,17 @@
             </select>
           </div>
         </div>
+        <div class="field-row" style="margin-top:.6rem;align-items:end;">
+          <div class="field">
+            <span class="field-label">Filtrer par étiquette</span>
+            <div id="task-label-chips" style="display:flex;flex-wrap:wrap;gap:.4rem;"></div>
+          </div>
+          <div class="field" style="max-width:220px;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-export-tasks">Exporter les tâches (Excel)</button>
+          </div>
+        </div>
       </div>
+      <div class="alert-banner" id="task-alerts" hidden></div>
       <div class="board" id="board" aria-live="polite"></div>
       <div class="card" style="margin-top:1rem;">
         <h3>Ajouter une tâche</h3>
@@ -1907,6 +1963,26 @@
           </div>
         </div>
         <p style="margin-top:.8rem;"><button type="button" class="btn btn-primary" id="btn-nt-add">Ajouter la tâche</button></p>
+      </div>
+      <div class="card" style="margin-top:1rem;">
+        <h3>Équipe : adjointes et boss</h3>
+        <p style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .8rem;">Ajoutez des adjointes ou des boss au besoin : ils apparaîtront comme responsables des tâches et dans les filtres. Dans la vraie application, chacun aura son propre compte.</p>
+        <div id="team-list" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.8rem;"></div>
+        <div class="field-row">
+          <div class="field">
+            <label for="team-name">Nom</label>
+            <input type="text" id="team-name" placeholder="ex. Adjointe 3" maxlength="40" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="team-role">Rôle</label>
+            <select id="team-role">
+              <option value="adjointe">Adjointe</option>
+              <option value="boss">Boss</option>
+            </select>
+          </div>
+        </div>
+        <p style="margin-top:.8rem;"><button type="button" class="btn btn-secondary" id="btn-team-add">Ajouter à l'équipe</button>
+        <span id="team-msg" style="font-size:.85rem;margin-left:.6rem;" aria-live="polite"></span></p>
       </div>
       <p style="font-size:.82rem;color:var(--muted);margin-top:1rem;">Astuce : terminez une tâche récurrente et sa prochaine échéance se crée toute seule dans « À faire ». Tout est enregistré dans votre navigateur.</p>
     </section>
@@ -2017,6 +2093,13 @@
         <p>Choisissez un relevé, lancez l'analyse : OptiGest vérifie ligne par ligne — charges, paiements, totaux, doublons, montants inhabituels — et vous indique qui doit encore payer, qui est soldé et qui a payé en trop.</p>
       </div>
       <div class="tabs" id="stmt-tabs" role="group" aria-label="Choisir un état de compte"></div>
+      <div class="card" style="margin-bottom:1rem;">
+        <h3>Importer mon relevé</h3>
+        <p style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .8rem;">Chargez votre propre fichier Excel (enregistré en CSV) : colonnes <strong>Tiers, N° document, Date, Type (facture/paiement), Montant</strong>. L'analyse se lance ensuite comme pour les exemples.</p>
+        <p><label class="btn btn-primary btn-sm" for="stmt-file" style="cursor:pointer;">Choisir un fichier CSV</label>
+        <input type="file" id="stmt-file" accept=".csv,.txt" hidden />
+        <span id="stmt-file-msg" style="font-size:.85rem;margin-left:.6rem;" aria-live="polite"></span></p>
+      </div>
       <div class="excel-wrap">
         <div class="excel-left">
         <div class="table-scroll">
@@ -2284,7 +2367,7 @@
   <section class="section" id="espace-acheteur">
     <div class="sec-head">
       <h2><span class="num" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H4l2-3.2A8 8 0 1 1 21 12z"/><path d="M8.5 12.5h.01M12.5 12.5h.01M16.5 12.5h.01"/></svg></span>Espace Acheteur</h2>
-      <p>L’acheteur veut commander vite et savoir où en est sa commande. Dans cette section, il clavarde avec l'assistant automatisé ou il remplit le formulaire de commande, puis il peut suivre sa commande en direct, sans voir le reste du système.</p>
+      <p>L’acheteur veut commander vite et savoir où en est sa commande. <strong>Vous commandez chez <span id="company-display">votre entreprise</span>.</strong> Dans cette section, il clavarde avec l'assistant automatisé ou il remplit le formulaire de commande, puis il peut suivre sa commande en direct, sans voir le reste du système.</p>
     </div>
     <div id="auth-acheteur">
       <div class="role-grid single">
@@ -2603,6 +2686,10 @@ function esc(s){
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function pl(n){ return n > 1 ? 's' : ''; }
+function scrollToEl(el, opts){
+  if(!el || typeof el.scrollIntoView !== 'function') return;
+  try{ el.scrollIntoView(opts || { behavior:'smooth', block:'nearest' }); }catch(e){}
+}
 function fmtHeure(min){
   var h = Math.floor(min/60), m = min % 60;
   return h + ' h ' + (m < 10 ? '0' + m : m);
@@ -2634,7 +2721,7 @@ var store = {
       localStorage.setItem(STORE_KEY, JSON.stringify({
         v:1,
         courses:courses, newCourseN:newCourseN, rules:RULES,
-        tasks:tasks, newTaskN:newTaskN,
+        tasks:tasks, newTaskN:newTaskN, team:TEAM, company:COMPANY,
         docs:DOCS, docN:docN,
         rems:REMS,
         questions:QUESTIONS, qN:qN,
@@ -2781,12 +2868,16 @@ function courseActions(c, deletable, opt){
   return h;
 }
 function courseCard(c, deletable, opt){
+  var kindLbl = { fixe:'Fixe', cueillette:'Cueillette', flexible:'Flexible' };
   var tags = '<span class="chip chip-' + c.prio + '">' + (c.prio === 'urgent' ? 'Urgente' : 'Normale') + '</span>' +
+             '<span class="chip chip-kind chip-kind-' + (c.kind || 'flexible') + '">' + (kindLbl[c.kind] || 'Flexible') + '</span>' +
              '<span class="chip chip-secteur">' + esc(c.secteur) + '</span>' +
              '<span class="chip chip-' + c.canal + '">' + CANAL[c.canal] + '</span> ' +
              statutChip(c);
   var lieu = c.ville ? esc(c.adr) + ', ' + esc(c.ville) : esc(c.adr);
-  var dem = c.avant !== null ? ' · <strong>Demandé avant ' + fmtHeure(c.avant) + '</strong>' : '';
+  var dem = (c.kind === 'fixe' && c.heureFixe !== null ? ' · <strong>Départ fixe à ' + fmtHeure(c.heureFixe) + '</strong>' : '') +
+            (c.avant !== null ? ' · <strong>Demandé avant ' + fmtHeure(c.avant) + '</strong>' : '') +
+            (c.stoxMails > 1 ? ' · <strong>📧 ' + c.stoxMails + ' courriels consolidés</strong>' : '');
   var cls = c.prio + (c.statut === 'encours' ? ' encours' : '') + (c.statut === 'fait' ? ' fait' : '');
   return '<div class="course ' + cls + '">' +
     '<div class="topline"><span class="time">' + (c.depart === null ? '— à placer' : fmtHeure(c.depart)) + '</span><span class="client">' + esc(c.client) + '</span></div>' +
@@ -2847,7 +2938,7 @@ function updateStats(){
 }
 function signature(){
   return courses
-    .map(function(c){ return c.id + ':' + c.driver + ':' + c.depart; })
+    .map(function(c){ return c.id + ':' + (c.kind || 'flexible') + ':' + c.heureFixe + ':' + c.prio + ':' + c.avant + ':' + c.driver + ':' + c.depart; })
     .sort().join('|');
 }
 
@@ -2887,8 +2978,16 @@ function optimize(opts){
 
   var morts = deadTimeNow();
 
-  // Règle : urgentes d'abord, puis demandes avec heure limite, puis regroupement par secteur
-  var pool = courses.slice().sort(function(a,b){
+  // Instantané avant recalcul : pour détecter les déplacements causés par les urgentes
+  var prevDeparts = {};
+  courses.forEach(function(c){ if(c.depart !== null) prevDeparts[c.id] = c.depart; });
+  var prevUrgentPlaced = {};
+  courses.forEach(function(c){ if(c.prio === 'urgent' && c.depart !== null) prevUrgentPlaced[c.id] = 1; });
+
+  // Règle : urgentes d'abord, puis demandes avec heure limite, puis regroupement par secteur.
+  // Les courses « fixes » sont verrouillées à leur heure de départ et placées en premier.
+  var fixes = courses.filter(function(c){ return c.kind === 'fixe' && c.heureFixe !== null; });
+  var pool = courses.filter(function(c){ return fixes.indexOf(c) === -1; }).sort(function(a,b){
     if(a.prio !== b.prio) return a.prio === 'urgent' ? -1 : 1;
     var ar = a.avant !== null, br = b.avant !== null;
     if(ar !== br) return ar ? -1 : 1;
@@ -2903,31 +3002,79 @@ function optimize(opts){
   var nbDrivers = Math.max(Object.keys(counts).length, 1);
   var before = Math.max(0, courses.length - nbDrivers - pendN) * TEMPS_ROUTE_BASE + pendN * TEMPS_ROUTE_BASE;
 
-  var half = Math.ceil(pool.length / 2);
-  var after = 0, maxLeg = 0, maxLegH = 0;
-  DRIVERS.forEach(function(d, idx){
-    var list = pool.filter(function(_, i){ return (i < half ? 0 : 1) === idx; });
-    var t = 8 * 60;
-    for(var k = 0; k < list.length; k++){
-      var c = list[k];
-      c.driver = d.id;
-      c.depart = t;
-      if(k < list.length - 1){
-        var tr = routeTime(list[k].secteur, list[k+1].secteur, t);
-        after += tr;
-        if(tr > maxLeg){ maxLeg = tr; maxLegH = t; }
-        t = t + dureeEff(c) + tr;
+  // Placement sur une ligne de temps par camion : premier créneau libre, camions équilibrés
+  var busy = {};
+  DRIVERS.forEach(function(d){ busy[d.id] = []; });
+  function isFree(id, from, to){
+    var ivs = busy[id];
+    for(var i = 0; i < ivs.length; i++){ if(from < ivs[i].to && to > ivs[i].from) return false; }
+    return true;
+  }
+  function book(id, from, to){
+    busy[id].push({from:from, to:to});
+    busy[id].sort(function(a,b){ return a.from - b.from; });
+  }
+  function driverLoad(id){
+    var s = 0;
+    busy[id].forEach(function(iv){ s += iv.to - iv.from; });
+    return s;
+  }
+  var lines = [];
+  if(opts.prelude){ opts.prelude.forEach(function(p){ lines.push(p); }); }
+  // 1. Courses fixes : départ verrouillé, placées en premier
+  fixes.forEach(function(c, i){
+    var id = DRIVERS[i % DRIVERS.length].id;
+    c.driver = id; c.depart = c.heureFixe;
+    book(id, c.heureFixe, c.heureFixe + dureeEff(c));
+  });
+  if(fixes.length){
+    lines.push(fixes.length + ' course' + (fixes.length > 1 ? 's' : '') + ' à départ fixe verrouillée' + (fixes.length > 1 ? 's' : '') + ' : ' +
+      fixes.map(function(c){ return '« ' + c.client + ' » à ' + fmtHeure(c.heureFixe); }).join(' · ') + '.');
+  }
+  // 2. Les autres : premier créneau libre, par ordre de priorité
+  pool.forEach(function(c){
+    var dur = dureeEff(c), placed = false;
+    var order = DRIVERS.slice().sort(function(a,b){ return driverLoad(a.id) - driverLoad(b.id); });
+    for(var t = 8 * 60; t <= 20 * 60 && !placed; t += 5){
+      if(c.avant !== null && t > c.avant) break;
+      for(var di = 0; di < order.length && !placed; di++){
+        var id = order[di].id;
+        if(isFree(id, t, t + dur)){ c.driver = id; c.depart = t; book(id, t, t + dur); placed = true; }
       }
+    }
+    if(!placed){ c.driver = null; c.depart = null; }
+  });
+
+  // Temps de route après optimisation (parcours réel de chaque camion)
+  var after = 0, maxLeg = 0, maxLegH = 0;
+  DRIVERS.forEach(function(d){
+    var list = courses.filter(function(x){ return x.driver === d.id && x.depart !== null; })
+                      .sort(function(a,b){ return a.depart - b.depart; });
+    for(var k = 0; k < list.length - 1; k++){
+      var tr = routeTime(list[k].secteur, list[k+1].secteur, list[k].depart);
+      after += tr;
+      if(tr > maxLeg){ maxLeg = tr; maxLegH = list[k].depart; }
     }
   });
 
-  var lines = [];
-  if(opts.prelude){ opts.prelude.forEach(function(p){ lines.push(p); }); }
   var urg = courses.filter(function(c){ return c.prio === 'urgent'; }).sort(function(a,b){ return a.depart - b.depart; });
   if(urg.length){
     lines.push(urg.length + ' course' + (urg.length > 1 ? 's' : '') + ' urgente' + (urg.length > 1 ? 's' : '') + ' placée' + (urg.length > 1 ? 's' : '') + ' en priorité : ' +
       urg.map(function(c){ return c.client + ' à ' + fmtHeure(c.depart) + ' (' + drvLabel(c.driver) + ')'; }).join(' · '));
   }
+  // Règle de Simon : une urgente déplace n'importe quelle course, sauf une autre urgente
+  var newUrgents = courses.filter(function(c){ return c.prio === 'urgent' && !prevUrgentPlaced[c.id]; });
+  newUrgents.forEach(function(u){
+    var moved = [];
+    courses.forEach(function(c){
+      if(c.prio !== 'urgent' && prevDeparts[c.id] !== undefined && c.depart !== null && c.depart > prevDeparts[c.id]){
+        moved.push('« ' + c.client + ' » (' + fmtHeure(prevDeparts[c.id]) + ' → ' + fmtHeure(c.depart) + ')');
+      }
+    });
+    if(moved.length){
+      lines.push('⚠ Règle des urgentes : « ' + u.client + ' » a déplacé ' + moved.join(', ') + '. Aucune autre course urgente n\u2019a été touchée.');
+    }
+  });
 
   var bougees = courses.filter(function(c){ return c.origDriver !== null && c.origDriver !== c.driver; });
   var nouvelles = courses.filter(function(c){ return c.origDriver === null; });
@@ -3077,6 +3224,7 @@ $('course-form').addEventListener('submit', function(e){
   var sel = $('c-type');
   var hv = $('c-heure').value;
   var canal = $('c-canal').value;
+  var kind = $('c-kind').value;
   var client = createPendingCourse({
     client: $('c-client').value,
     adr: $('c-adr').value,
@@ -3086,6 +3234,8 @@ $('course-form').addEventListener('submit', function(e){
     duree: parseInt(sel.options[sel.selectedIndex].getAttribute('data-duree'), 10),
     avant: hv === 'none' ? null : parseInt(hv, 10),
     prio: document.querySelector('input[name="c-prio"]:checked').value,
+    kind: kind,
+    heureFixe: kind === 'fixe' ? parseInt($('c-heurefixe').value, 10) : null,
     origin: 'dispatch'
   }).client;
   $('course-form').reset();
@@ -3093,7 +3243,7 @@ $('course-form').addEventListener('submit', function(e){
   setStatus('Demande reçue — script en arrière-plan', false);
   setLog(['Commande « ' + client + ' » reçue via ' + CANAL[canal] + '.',
           'Script exécuté en arrière-plan : la course est planifiée le mieux possible, avec le temps nécessaire…']);
-  $('pending-strip').scrollIntoView({behavior:'smooth', block:'nearest'});
+  scrollToEl($('pending-strip'));
   setTimeout(function(){
     optimize({ prelude:['Commande « ' + client + ' » traitée par le script d\u2019arrière-plan et ajoutée à l\u2019horaire, comme demandé.'] });
   }, 1400);
@@ -3127,6 +3277,35 @@ $('btn-email').addEventListener('click', function(){
     optimize({ prelude:['Le courriel a été transformé en course automatiquement et stocké dans l\u2019horaire.'] });
     btn.disabled = false;
   }, 2100);
+});
+$('c-kind').addEventListener('change', function(){
+  $('c-heurefixe-wrap').hidden = ($('c-kind').value !== 'fixe');
+});
+/* Simulation STOX : plusieurs courriels « commande prête » = une seule course consolidée */
+var stoxMails = 0, stoxCourseId = null;
+$('btn-stox').addEventListener('click', function(){
+  stoxMails++;
+  var existing = null;
+  for(var i = 0; i < courses.length; i++){ if(courses[i].id === stoxCourseId){ existing = courses[i]; break; } }
+  if(existing){
+    existing.stoxMails = stoxMails;
+    setLog(['Courriel STOX n°' + stoxMails + ' reçu : commande prête (coin Chauveau / Henri-IV).',
+            'Règle STOX appliquée : ' + stoxMails + ' courriels → 1 seule course « Ramassage STOX ». Aucun doublon créé.']);
+  } else {
+    newCourseN++;
+    stoxCourseId = 'n' + newCourseN;
+    courses.push({
+      id:stoxCourseId, client:'STOX Distributions',
+      adr:'Coin Chauveau / Henri-IV', ville:'Québec',
+      secteur:'Nord', type:'Ramassage de pièces', duree:40, prio:'normal',
+      kind:'flexible', heureFixe:null,
+      avant:null, canal:'courriel', statut:'plan', feedbackOpen:false,
+      depart:null, driver:null, origDriver:null, stoxMails:stoxMails
+    });
+    setLog(['Courriel STOX n°1 reçu : commande prête à être ramassée (coin Chauveau / Henri-IV).',
+            'Course « Ramassage STOX » créée. Les prochains courriels du matin seront consolidés dedans, sans créer de doublon.']);
+  }
+  renderPending(); updateStats(); renderAvis();
 });
 $('btn-optimize').addEventListener('click', function(){ optimize(); });
 renderDrivers(); renderPending(); updateStats(); renderAvis();
@@ -3177,8 +3356,68 @@ renderRules();
 /* ================= TÂCHES : suivi gestionnaire ================= */
 var COL_ORDER = ['todo','doing','done'];
 var COLS = { todo:'À faire', doing:'En cours', done:'Terminé' };
-var LABELS = { inventaire:'Inventaire', comptabilite:'Comptabilité', dispatch:'Dispatch', fournisseur:'Fournisseur' };
-var RESPONSABLES = ['Simon', 'Adjointe 1', 'Adjointe 2'];
+var LABELS = { inventaire:'Inventaire', comptabilite:'Comptabilité', dispatch:'Dispatch', fournisseur:'Fournisseur', urgent:'Urgent' };
+/* Équipe configurable : adjointes et boss, modifiable au besoin (ajout/retrait) */
+var TEAM = (function(){
+  var a = savedArray('team');
+  if(a && a.length) return a.filter(function(m){ return m && typeof m.name === 'string' && m.name; });
+  return [
+    { name:'Adjointe 1', role:'adjointe' },
+    { name:'Adjointe 2', role:'adjointe' },
+    { name:'Boss', role:'boss' }
+  ];
+})();
+function teamNames(){ return ['Simon'].concat(TEAM.map(function(m){ return m.name; })); }
+var RESPONSABLES = teamNames();
+function renderTeam(){
+  RESPONSABLES = teamNames();
+  var list = $('team-list');
+  list.innerHTML = TEAM.length ? TEAM.map(function(m, i){
+    return '<span class="chip chip-secteur" style="font-size:.85rem;">' + esc(m.name) +
+      ' <small style="opacity:.75;">(' + (m.role === 'boss' ? 'Boss' : 'Adjointe') + ')</small>' +
+      ' <button type="button" class="team-x" data-i="' + i + '" aria-label="Retirer ' + esc(m.name) + '" style="border:0;background:none;cursor:pointer;font-size:1rem;line-height:1;">×</button></span>';
+  }).join('') : '<span style="font-size:.85rem;color:var(--muted);">Aucun membre — ajoutez-en un ci-dessous.</span>';
+  list.querySelectorAll('.team-x').forEach(function(b){
+    b.addEventListener('click', function(){ removeTeamMember(parseInt(b.getAttribute('data-i'), 10)); });
+  });
+  var qui = $('nt-qui'), cur = qui ? qui.value : '';
+  if(qui){
+    qui.innerHTML = RESPONSABLES.map(function(r){ return '<option>' + esc(r) + '</option>'; }).join('');
+    if(RESPONSABLES.indexOf(cur) >= 0) qui.value = cur;
+  }
+  var f = $('task-filtre-qui'), fc = f ? f.value : '';
+  if(f){
+    f.innerHTML = '<option value="">Tous</option>' + RESPONSABLES.map(function(r){ return '<option>' + esc(r) + '</option>'; }).join('');
+    if(fc && RESPONSABLES.indexOf(fc) >= 0) f.value = fc;
+  }
+}
+function removeTeamMember(i){
+  var m = TEAM[i]; if(!m) return;
+  var used = tasks.filter(function(t){ return t.qui === m.name; }).length;
+  if(used){
+    $('team-msg').textContent = '⚠ ' + m.name + ' a ' + used + ' tâche(s) : réassignez-les d\u2019abord.';
+    return;
+  }
+  TEAM.splice(i, 1); store.save(); renderTeam(); renderBoard();
+  $('team-msg').textContent = '✓ ' + m.name + ' retiré(e) de l\u2019équipe.';
+}
+/* Nom de l'entreprise : affiché aux acheteurs, modifiable par le gestionnaire */
+var COMPANY = (SAVED && typeof SAVED.company === 'string') ? SAVED.company : '';
+function renderCompany(){
+  var disp = $('company-display');
+  if(disp) disp.textContent = COMPANY.trim() || 'votre entreprise';
+  var inp = $('company-name');
+  if(inp && document.activeElement !== inp) inp.value = COMPANY;
+}
+(function(){
+  var btn = $('btn-company-save');
+  if(btn) btn.addEventListener('click', function(){
+    COMPANY = $('company-name').value.trim();
+    store.save(); renderCompany();
+    $('company-msg').textContent = COMPANY ? '✓ Nom enregistré : les acheteurs verront « ' + COMPANY + ' ».' : '✓ Nom effacé.';
+  });
+  renderCompany();
+})();
 var RECURRENCES = { aucune:'Aucune', mensuelle:'Mensuelle', trimestrielle:'Aux 3 mois', annuelle:'Annuelle' };
 var RECUR_MOIS = { mensuelle:1, trimestrielle:3, annuelle:12 };
 var tasks = (function(){ var a = savedArray('tasks'); return a ? a : [
@@ -3198,7 +3437,35 @@ var tasks = (function(){ var a = savedArray('tasks'); return a ? a : [
   { id:'t7', col:'todo', label:'comptabilite', t:"Fermeture d'année — Compagnie A : pièces justificatives", due:'30 novembre', qui:'Simon', recur:'annuelle', notes:[] }
 ]; })();
 var newTaskN = (SAVED && typeof SAVED.newTaskN === 'number') ? SAVED.newTaskN : 0;
-var taskSearch = '', taskFiltreQui = '';
+var taskSearch = '', taskFiltreQui = '', taskFiltreLabel = '';
+function renderLabelChips(){
+  var wrap = $('task-label-chips');
+  if(!wrap) return;
+  var html = '<button type="button" class="chip' + (taskFiltreLabel === '' ? ' chip-secteur' : '') + '" data-label-filter="">Toutes</button>';
+  Object.keys(LABELS).forEach(function(k){
+    html += '<button type="button" class="chip lbl-' + k + (taskFiltreLabel === k ? ' chip-secteur' : '') + '" data-label-filter="' + k + '">' + LABELS[k] + '</button>';
+  });
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('[data-label-filter]').forEach(function(b){
+    b.addEventListener('click', function(){
+      taskFiltreLabel = b.getAttribute('data-label-filter');
+      renderLabelChips(); renderBoard();
+    });
+  });
+}
+function downloadTasksCsv(){
+  var cols = { todo:'À faire', doing:'En cours', done:'Terminé' };
+  var rows = [['Tâche', 'Statut', 'Responsable', 'Échéance', 'Récurrence', 'Étiquette', 'Suivis (journal)']];
+  tasks.forEach(function(t){
+    var journal = taskNotes(t).map(function(n){ return n.d + ' — ' + n.by + ' : ' + n.txt; }).join(' | ');
+    rows.push([t.t, cols[t.col] || t.col, taskQui(t), t.due || '', RECURRENCES[taskRecur(t)] || '', LABELS[t.label] || t.label, journal]);
+  });
+  var csv = '\uFEFF' + rows.map(function(r){
+    return r.map(function(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }).join(';');
+  }).join('\r\n');
+  downloadBlob('taches-suivi.csv', csv);
+  toast('Export Excel', tasks.length + ' tâche(s) exportée(s) dans taches-suivi.csv — prêt pour le comptable.');
+}
 
 function taskById(id){ return tasks.filter(function(t){ return t.id === id; })[0]; }
 function taskQui(t){ return RESPONSABLES.indexOf(t.qui) >= 0 ? t.qui : 'Simon'; }
@@ -3208,6 +3475,7 @@ function saveTasks(){ store.save(); }
 
 function taskMatch(t){
   if(taskFiltreQui && taskQui(t) !== taskFiltreQui) return false;
+  if(taskFiltreLabel && t.label !== taskFiltreLabel) return false;
   if(!taskSearch) return true;
   var q = taskSearch.toLowerCase();
   var hay = (t.t + ' ' + (t.due || '') + ' ' + taskQui(t) + ' ' +
@@ -3239,7 +3507,19 @@ function moveTask(id, dir){
   }
   renderBoard(); saveTasks();
 }
+function renderTaskAlerts(){
+  var el = $('task-alerts');
+  if(!el) return;
+  var n = tasks.filter(function(t){ return t.col !== 'done' && t.label === 'urgent'; }).length;
+  if(n){
+    el.hidden = false;
+    el.innerHTML = '🔔 <strong>' + n + ' tâche' + (n > 1 ? 's' : '') + ' urgente' + (n > 1 ? 's' : '') + '</strong> à traiter en priorité.';
+  } else {
+    el.hidden = true;
+  }
+}
 function renderBoard(){
+  renderTaskAlerts();
   var html = '';
   COL_ORDER.forEach(function(col, ci){
     var list = tasks.filter(function(t){ return t.col === col && taskMatch(t); });
@@ -3377,6 +3657,10 @@ function editTaskTitle(tEl){
   });
 }
 renderBoard();
+renderTeam();
+renderLabelChips();
+var btnExpTasks = $('btn-export-tasks');
+if(btnExpTasks) btnExpTasks.addEventListener('click', downloadTasksCsv);
 /* Recherche, filtre par responsable et ajout via le formulaire */
 (function(){
   var s = $('task-search'), f = $('task-filtre-qui');
@@ -3386,6 +3670,18 @@ renderBoard();
   if(add) add.addEventListener('click', addTaskFromForm);
   var titre = $('nt-titre');
   if(titre) titre.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); addTaskFromForm(); } });
+  var teamAdd = $('btn-team-add');
+  if(teamAdd) teamAdd.addEventListener('click', function(){
+    var name = $('team-name').value.trim();
+    if(!name){ $('team-name').focus(); return; }
+    if(teamNames().indexOf(name) >= 0){ $('team-msg').textContent = '⚠ Ce nom existe déjà.'; return; }
+    TEAM.push({ name:name, role:$('team-role').value });
+    store.save(); renderTeam();
+    $('team-name').value = '';
+    $('team-msg').textContent = '✓ ' + name + ' ajouté(e) à l\u2019équipe.';
+  });
+  var teamName = $('team-name');
+  if(teamName) teamName.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); teamAdd.click(); } });
 })();
 /* Cliquer sur une étiquette la fait changer (clic natif du bouton, y compris clavier) */
 (function(){
@@ -3798,6 +4094,88 @@ $('btn-reset').addEventListener('click', function(){
 });
 renderTabs(); renderStatement();
 
+/* Import CSV : le relevé Excel de l'utilisateur devient analysable */
+function parseCsv(text){
+  var lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(function(l){ return l.trim() !== ''; });
+  if(!lines.length) return [];
+  var sep = (lines[0].split(';').length >= lines[0].split(',').length) ? ';' : ',';
+  function splitLine(l){
+    var out = [], cur = '', q = false;
+    for(var i = 0; i < l.length; i++){
+      var ch = l[i];
+      if(q){
+        if(ch === '"'){ if(l[i+1] === '"'){ cur += '"'; i++; } else q = false; }
+        else cur += ch;
+      } else if(ch === '"'){ q = true; }
+      else if(ch === sep){ out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    out.push(cur);
+    return out.map(function(c){ return c.trim(); });
+  }
+  return lines.map(splitLine);
+}
+function parseMontant(v){
+  var s = String(v).replace(/[$\s]/g, '').replace(/,/g, '.');
+  var parts = s.split('.');
+  if(parts.length > 2) s = parts.slice(0, -1).join('') + '.' + parts[parts.length - 1];
+  var n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+function importStatementCsv(text, fname){
+  var grid = parseCsv(text);
+  if(grid.length < 2) return 'Fichier vide ou illisible.';
+  var head = grid[0].map(function(h){ return h.toLowerCase(); });
+  function col(){
+    for(var i = 0; i < arguments.length; i++){
+      for(var j = 0; j < head.length; j++){ if(head[j].indexOf(arguments[i]) >= 0) return j; }
+    }
+    return -1;
+  }
+  var iFourn = col('fourn', 'tiers', 'émetteur', 'emetteur', 'nom'),
+      iNum = col('num', 'doc', 'facture', 'référence', 'reference'),
+      iDate = col('date'),
+      iType = col('type'),
+      iMont = col('montant', 'amount', 'total', 'somme');
+  if(iFourn < 0 || iMont < 0) return 'Colonnes introuvables : il faut au minimum « Tiers » et « Montant ».';
+  var rows = [], n = 0;
+  for(var r = 1; r < grid.length; r++){
+    var g = grid[r];
+    var m = parseMontant(g[iMont]);
+    if(m === null) continue;
+    var tv = iType >= 0 ? String(g[iType]).toLowerCase() : 'f';
+    var type = /pay|paiement|^p$/.test(tv) ? 'p' : 'f';
+    n++;
+    rows.push({
+      id:n,
+      fourn:String(g[iFourn] || 'Tiers inconnu'),
+      num:iNum >= 0 ? String(g[iNum] || ('L' + n)) : ('L' + n),
+      date:iDate >= 0 ? String(g[iDate]) : '',
+      type:type, montant:Math.abs(m)
+    });
+  }
+  if(!rows.length) return 'Aucune ligne avec un montant valide.';
+  var name = fname.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
+  STATEMENTS.push({ name:name + ' (importé)', sens:'pay', totalDecl:null, analyzed:false, report:null, rows:rows, imported:true });
+  stmtIdx = STATEMENTS.length - 1;
+  renderTabs(); renderStatement();
+  return null;
+}
+(function(){
+  var fi = $('stmt-file');
+  if(fi) fi.addEventListener('change', function(){
+    var f = fi.files && fi.files[0];
+    if(!f) return;
+    var rd = new FileReader();
+    rd.onload = function(){
+      var err = importStatementCsv(String(rd.result || ''), f.name);
+      $('stmt-file-msg').textContent = err ? ('⚠ ' + err) : ('✓ « ' + f.name + ' » importé : lancez l\u2019analyse.');
+      fi.value = '';
+    };
+    rd.readAsText(f);
+  });
+})();
+
 /* ================= DOCUMENTS ================= */
 var CLASSE = {
   'Facture fournisseur':'Factures fournisseurs',
@@ -3895,6 +4273,7 @@ function createPendingCourse(o){
     ville: o.ville || '',
     secteur:o.secteur, type:o.type, duree:o.duree, prio:(o.prio || 'normal'),
     avant:(o.avant === undefined ? null : o.avant),
+    kind:(o.kind || 'flexible'), heureFixe:(o.heureFixe === undefined ? null : o.heureFixe),
     canal:(o.canal || 'direct'), statut:'plan', feedbackOpen:false,
     depart:null, driver:null, origDriver:null,
     origin:(o.origin || null), createdBy:(o.createdBy || null)
@@ -4074,7 +4453,7 @@ function loginAs(acc, opts){
   renderWsAll();
   if(opts.toast !== false) toast('Bienvenue, ' + acc.user, 'Connecté comme ' + roleOfCard(acc.role) + '.');
   if(opts.scroll !== false){
-    var sp = $(spaceForRole(acc.role)); if(sp) sp.scrollIntoView({ behavior:'smooth', block:'start' });
+    var sp = $(spaceForRole(acc.role)); scrollToEl(sp, { behavior:'smooth', block:'start' });
   }
 }
 function logout(){
@@ -4697,7 +5076,7 @@ function captureFlow(f, forHuman){
     var canSee = rg && rg.offsetParent !== null;
     if(canSee){
       $('tab-route').click();
-      rg.scrollIntoView({ behavior:'smooth', block:'start' });
+      scrollToEl(rg, { behavior:'smooth', block:'start' });
     } else {
       toast('Section réservée', 'Le journal des transferts est tenu dans l\u2019espace Gestionnaire : l\u2019acheteur suit seulement sa commande.');
     }
@@ -4760,7 +5139,7 @@ $('fo-form').addEventListener('submit', function(e){
   $('fo-form').hidden = true;
   $('fo-recap').hidden = false;
   $('fo-recap').innerHTML = h;
-  $('fo-recap').scrollIntoView({ behavior:'smooth', block:'nearest' });
+  scrollToEl($('fo-recap'));
   $('fo-again').addEventListener('click', function(){
     $('fo-form').reset();
     $('fo-recap').hidden = true;
@@ -4772,7 +5151,7 @@ $('fo-form').addEventListener('submit', function(e){
     var canSee = rg && rg.offsetParent !== null;
     if(canSee){
       $('tab-route').click();
-      rg.scrollIntoView({ behavior:'smooth', block:'start' });
+      scrollToEl(rg, { behavior:'smooth', block:'start' });
     } else {
       toast('Section réservée', 'Le journal des transferts est tenu dans l\u2019espace Gestionnaire : l\u2019acheteur suit seulement sa commande.');
     }
