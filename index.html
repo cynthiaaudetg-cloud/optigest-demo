@@ -1078,6 +1078,7 @@
   #gm-dash-tiles .tile-ok .tile-n{ color:var(--ok); }
   .dash-quick{ display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-top:.6rem; padding-top:.8rem; border-top:1px solid var(--line); }
   .dash-quick-label{ font-size:.85rem; font-weight:700; color:var(--muted); margin-right:.2rem; }
+  .section-quick{ margin-bottom:1rem; }
   .ws-cols{ display:grid; grid-template-columns:1fr 1fr; gap:1.1rem; align-items:start; }
   @media (max-width:900px){ .ws-cols{ grid-template-columns:1fr; } }
   .ws-msg{ font-size:.88rem; color:var(--ink-soft); margin:0 0 .8rem; min-height:1.2em; }
@@ -1498,6 +1499,21 @@
       <h2><span class="num" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7.5" r="4"/><path d="M22 12v7M19 15.5h6"/></svg></span>Espace Gestionnaire</h2>
       <p>Le gestionnaire garde la vue d’ensemble : il surveille les courses, les tâches, les chiffres et les documents, règle les transferts automatiques, choisit les questions posées aux clients, et gère les accès des livreurs et des acheteurs.</p>
     </div>
+      <div class="card acc-panel" id="gm-dashboard">
+        <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>Ce qui demande votre attention</h3>
+        <p style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .8rem;">L'important d'un coup d'œil, avec un bouton pour y aller directement.</p>
+        <div class="tile-grid" id="gm-dash-tiles" style="margin-top:.4rem;"></div>
+        <div class="dash-quick" aria-label="Accès rapide">
+          <span class="dash-quick-label">Accès rapide :</span>
+          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#dispatch">Dispatch</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#trello">Tâches</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#inventaire">Inventaire</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#excel">Comptabilité</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#documents">Documents</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#rappels">Rappels</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#gm-access">Équipe</button>
+        </div>
+      </div>
     <div id="auth-gestionnaire">
       <div class="role-grid single">
         <div class="role-card" data-role-card="gestionnaire">
@@ -1548,21 +1564,6 @@
         <span>Vous êtes connecté comme <strong>gestionnaire</strong> : vous voyez <strong>tout</strong> (dispatch, Trello, Excel, documents, clavardage automatisé, rappels) et vous gérez les accès ci-dessous.</span>
       </div>
       <div class="tile-grid" id="gm-tiles"></div>
-      <div class="card acc-panel" id="gm-dashboard">
-        <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>Ce qui demande votre attention</h3>
-        <p style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .8rem;">L'important d'un coup d'œil, avec un bouton pour y aller directement.</p>
-        <div class="tile-grid" id="gm-dash-tiles" style="margin-top:.4rem;"></div>
-        <div class="dash-quick" aria-label="Accès rapide">
-          <span class="dash-quick-label">Accès rapide :</span>
-          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#dispatch">Dispatch</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#trello">Tâches</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#inventaire">Inventaire</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#excel">Comptabilité</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#documents">Documents</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#rappels">Rappels</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#gm-access">Équipe</button>
-        </div>
-      </div>
       <div class="card acc-panel">
         <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4"/></svg>Mon entreprise</h3>
         <p style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .8rem;">Le nom affiché aux acheteurs quand ils commandent. Laissez vide pour garder « votre entreprise ».</p>
@@ -1996,7 +1997,7 @@
       </div>
       <div class="alert-banner" id="task-alerts" hidden></div>
       <div class="board" id="board" aria-live="polite"></div>
-      <div class="card" style="margin-top:1rem;">
+      <div class="card" id="task-add-card" style="margin-top:1rem;">
         <h3>Ajouter une tâche</h3>
         <div class="field-row">
           <div class="field">
@@ -2112,7 +2113,7 @@
         </div>
         <p style="margin-top:.8rem;"><button type="button" class="btn btn-secondary btn-sm" id="btn-inv-csv">Exporter en CSV</button></p>
       </div>
-      <div class="card" style="margin-top:1rem;">
+      <div class="card" id="inv-add-card" style="margin-top:1rem;">
         <h3>Ajouter un article</h3>
         <div class="field-row">
           <div class="field">
@@ -4928,7 +4929,7 @@ function renderGmStats(){
 /* Tableau de bord : l'important d'un coup d'œil, avec accès rapide */
 function renderGmDashboard(){
   var box = $('gm-dash-tiles');
-  if(!box || !session || session.role !== 'gestionnaire') return;
+  if(!box) return;
   var now = new Date(); now.setHours(0,0,0,0);
   var urg = courses.filter(function(c){ return c.prio === 'urgent' && c.statut !== 'fait'; }).length;
   var retard = tasks.filter(function(t){
@@ -4955,10 +4956,59 @@ function renderGmDashboard(){
 (function(){
   document.addEventListener('click', function(e){
     var t = e.target.closest('[data-dash-go]');
-    if(!t) return;
-    var target = t.getAttribute('data-dash-go');
-    var el = $(target.slice(1));
-    if(el) scrollToEl(el);
+    if(t){
+      var el = $(t.getAttribute('data-dash-go').slice(1));
+      if(el) scrollToEl(el);
+      return;
+    }
+    var qc = e.target.closest('[data-quick-click]');
+    if(qc){
+      var tgt = $(qc.getAttribute('data-quick-click').slice(1));
+      if(tgt) tgt.click();
+    }
+  });
+  /* Rangées d'accès rapide en haut de chaque section utile */
+  var QUICK_ROWS = {
+    'dispatch': [
+      { label:'Optimiser la journée', click:'#btn-optimize' },
+      { label:'Ajouter une course', go:'#course-form' },
+      { label:'Exporter la journée', click:'#btn-export-courses' }
+    ],
+    'trello': [
+      { label:'Les plus pressantes d\u2019abord', click:'#btn-sort-presse' },
+      { label:'Ajouter une tâche', go:'#task-add-card' },
+      { label:'Exporter (Excel)', click:'#btn-export-tasks' }
+    ],
+    'inventaire': [
+      { label:'Ajouter un article', go:'#inv-add-card' },
+      { label:'Exporter en CSV', click:'#btn-inv-csv' }
+    ],
+    'excel': [
+      { label:'Importer mon relevé', go:'#stmt-file' },
+      { label:'États analysés', go:'#stmt-tabs' }
+    ],
+    'documents': [
+      { label:'Ajouter un document', go:'#doc-form' }
+    ],
+    'rappels': [
+      { label:'Ajouter un rappel', go:'#rem-form' }
+    ]
+  };
+  Object.keys(QUICK_ROWS).forEach(function(secId){
+    var sec = document.getElementById(secId);
+    if(!sec) return;
+    var head = sec.querySelector('.sec-head');
+    if(!head || sec.querySelector(':scope > .dash-quick')) return;
+    var row = document.createElement('div');
+    row.className = 'dash-quick section-quick';
+    row.setAttribute('aria-label', 'Accès rapide');
+    var html = '<span class="dash-quick-label">Accès rapide :</span>';
+    QUICK_ROWS[secId].forEach(function(b){
+      if(b.click) html += '<button type="button" class="btn btn-secondary btn-sm" data-quick-click="' + b.click + '">' + b.label + '</button>';
+      else html += '<button type="button" class="btn btn-secondary btn-sm" data-dash-go="' + b.go + '">' + b.label + '</button>';
+    });
+    row.innerHTML = html;
+    head.parentNode.insertBefore(row, head.nextSibling);
   });
 })();
 function renderGmTiles(){
@@ -5863,6 +5913,7 @@ renderReminders();
   store.save();
 })();
 applyGates();
+renderGmDashboard();
 startFlow('chat');
 
 })();
