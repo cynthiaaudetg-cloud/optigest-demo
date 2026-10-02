@@ -1541,6 +1541,25 @@
         <p style="font-size:.85rem;margin:.5rem 0 0;" id="company-msg" aria-live="polite"></p>
       </div>
       <div class="card acc-panel">
+        <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3.2A8 8 0 1 1 21 12z"/><path d="M8.5 12.5h.01M12.5 12.5h.01M16.5 12.5h.01"/></svg>Messages de l'équipe <span class="pill" id="gm-msg-count" hidden></span></h3>
+        <p style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .8rem;">Les messages envoyés par les livreurs et les acheteurs arrivent ici. Dans la vraie application, ils partiraient en notification sur votre téléphone.</p>
+        <div id="gm-msgs"></div>
+        <div class="field-row" style="align-items:end;margin-top:.8rem;">
+          <div class="field">
+            <label for="gm-msg-to">Répondre à</label>
+            <select id="gm-msg-to"></select>
+          </div>
+          <div class="field" style="flex:2;">
+            <label for="gm-msg-text">Votre message</label>
+            <input type="text" id="gm-msg-text" placeholder="Écrivez votre réponse…" maxlength="300" autocomplete="off" />
+          </div>
+          <div class="field" style="max-width:150px;">
+            <button type="button" class="btn btn-primary btn-sm" id="gm-msg-send">Envoyer</button>
+          </div>
+        </div>
+        <p style="font-size:.85rem;margin:.5rem 0 0;" id="gm-msg-status" aria-live="polite"></p>
+      </div>
+      <div class="card acc-panel">
         <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7.5" r="4"/><path d="M22 12v7M19 15.5h6"/></svg>Gérer les accès</h3>
 
         <div class="table-wrap"><table class="stack-table" id="acc-table">
@@ -2576,6 +2595,25 @@
           <span class="drv-agenda" id="ws-agenda"></span>
         </div>
       </div>
+      <div class="card">
+        <h3>Messages <span class="pill" id="liv-msg-count" hidden></span></h3>
+        <p style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .8rem;">Écrivez au bureau : le gestionnaire, les adjointes et le boss reçoivent votre message ici même. Dans la vraie application, il arriverait sur leur téléphone.</p>
+        <div id="liv-msgs" style="margin-bottom:.8rem;"></div>
+        <div class="field-row" style="align-items:end;">
+          <div class="field">
+            <label for="liv-msg-to">Destinataire</label>
+            <select id="liv-msg-to"></select>
+          </div>
+          <div class="field" style="flex:2;">
+            <label for="liv-msg-text">Votre message</label>
+            <input type="text" id="liv-msg-text" placeholder="Ex. Pneu crevé, je serai en retard de 15 min…" maxlength="300" autocomplete="off" />
+          </div>
+          <div class="field" style="max-width:150px;">
+            <button type="button" class="btn btn-primary btn-sm" id="liv-msg-send">Envoyer</button>
+          </div>
+        </div>
+        <p style="font-size:.85rem;margin:.5rem 0 0;" id="liv-msg-status" aria-live="polite"></p>
+      </div>
       <p class="ws-note">Cet espace ne montre que vos courses, vos statuts et vos trajets — la partie administration reste dans l'espace Gestionnaire.</p>
     </div>
   </section>
@@ -2728,7 +2766,8 @@ var store = {
         inv:INV, invN:invN,
         accounts:ACCOUNTS,
         sessions:SESSIONS, activeSessionRole:ACTIVE_SESSION_ROLE,
-        transfers:TRANSFER_LOG, routeCh:ROUTE_CH
+        transfers:TRANSFER_LOG, routeCh:ROUTE_CH,
+        msgs:MSGS
       }));
     }catch(e){ /* stockage indisponible : la démo continue en mémoire seule */ }
   },
@@ -3401,7 +3440,96 @@ function removeTeamMember(i){
   TEAM.splice(i, 1); store.save(); renderTeam(); renderBoard();
   $('team-msg').textContent = '✓ ' + m.name + ' retiré(e) de l\u2019équipe.';
 }
-/* Nom de l'entreprise : affiché aux acheteurs, modifiable par le gestionnaire */
+/* Messagerie entre les rôles : simulée dans la démo, notifications réelles au niveau 2 */
+var MSGS = (SAVED && Array.isArray(SAVED.msgs)) ? SAVED.msgs : [];
+function msgRecipients(){
+  var list = [{id:'Gestionnaire', label:'Gestionnaire (Simon)'}];
+  (TEAM || []).forEach(function(m){ list.push({id:m.name, label:m.name + ' (' + (m.role === 'boss' ? 'Boss' : 'Adjointe') + ')'}); });
+  list.push({id:'Livreur (Camion 1)', label:'Livreur — Camion 1 (Maxime)'});
+  list.push({id:'Livreur (Camion 2)', label:'Livreur — Camion 2 (Léa)'});
+  return list;
+}
+function currentLivreur(){
+  var s = $('ws-truck');
+  return 'Livreur (Camion ' + ((s && s.value === 'B') ? '2' : '1') + ')';
+}
+function msgTime(ts){
+  var d = new Date(ts);
+  return d.toLocaleDateString('fr-CA', {day:'numeric', month:'short'}) + ' ' + d.toLocaleTimeString('fr-CA', {hour:'2-digit', minute:'2-digit'});
+}
+function msgHtml(m){
+  return '<div class="feed-item"><div class="feed-head"><strong>' + esc(m.from) + '</strong><span>→ ' + esc(m.to) + ' · ' + esc(msgTime(m.ts)) + '</span></div><div>' + esc(m.text) + '</div></div>';
+}
+function fillMsgTo(sel, selfId){
+  if(!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = msgRecipients().filter(function(r){ return r.id !== selfId; }).map(function(r){
+    return '<option value="' + esc(r.id) + '"' + (r.id === cur ? ' selected' : '') + '>' + esc(r.label) + '</option>';
+  }).join('');
+}
+function sendMsg(from, to, text){
+  text = String(text || '').trim();
+  if(!text || !to) return false;
+  MSGS.push({from:from, to:to, text:text, ts:Date.now(), read:false});
+  store.save(); renderMsgs();
+  return true;
+}
+function renderMsgs(){
+  var me = currentLivreur();
+  fillMsgTo($('liv-msg-to'), me);
+  fillMsgTo($('gm-msg-to'), 'Gestionnaire');
+  // Marquer comme lus les messages adressés au livreur affiché
+  var changed = false;
+  MSGS.forEach(function(m){ if(m.to === me && !m.read){ m.read = true; changed = true; } });
+  if(changed) store.save();
+  var mine = MSGS.filter(function(m){ return m.from === me || m.to === me; });
+  var livBox = $('liv-msgs');
+  if(livBox) livBox.innerHTML = mine.length
+    ? mine.slice(-6).reverse().map(msgHtml).join('')
+    : '<p class="ws-note">Aucun message pour l\u2019instant.</p>';
+  var gmBox = $('gm-msgs');
+  if(gmBox) gmBox.innerHTML = MSGS.length
+    ? MSGS.slice(-10).reverse().map(function(m, i){
+        var idx = MSGS.length - 1 - i;
+        return msgHtml(m) + (m.read ? '' : ' <button type="button" class="btn btn-secondary btn-sm" data-msg-read="' + idx + '">Marquer comme lu</button>');
+      }).join('')
+    : '<p class="ws-note">Aucun message pour l\u2019instant.</p>';
+  var unreadGm = MSGS.filter(function(m){ return !m.read && m.to === 'Gestionnaire'; }).length;
+  var pill = $('gm-msg-count');
+  if(pill){ pill.hidden = !unreadGm; pill.textContent = unreadGm + ' non lu' + (unreadGm > 1 ? 's' : ''); }
+  var livPill = $('liv-msg-count');
+  if(livPill) livPill.hidden = true;
+}
+(function(){
+  var bs = $('liv-msg-send');
+  if(bs) bs.addEventListener('click', function(){
+    if(sendMsg(currentLivreur(), $('liv-msg-to').value, $('liv-msg-text').value)){
+      $('liv-msg-text').value = '';
+      $('liv-msg-status').textContent = '✓ Message envoyé.';
+    } else {
+      $('liv-msg-status').textContent = 'Écrivez votre message d\u2019abord.';
+    }
+  });
+  var gs = $('gm-msg-send');
+  if(gs) gs.addEventListener('click', function(){
+    if(sendMsg('Gestionnaire', $('gm-msg-to').value, $('gm-msg-text').value)){
+      $('gm-msg-text').value = '';
+      $('gm-msg-status').textContent = '✓ Message envoyé.';
+    } else {
+      $('gm-msg-status').textContent = 'Écrivez votre message d\u2019abord.';
+    }
+  });
+  var gmBox = $('gm-msgs');
+  if(gmBox) gmBox.addEventListener('click', function(e){
+    var b = e.target.closest('[data-msg-read]');
+    if(!b) return;
+    var m = MSGS[+b.getAttribute('data-msg-read')];
+    if(m){ m.read = true; store.save(); renderMsgs(); }
+  });
+  var truck = $('ws-truck');
+  if(truck) truck.addEventListener('change', renderMsgs);
+  renderMsgs();
+})();
 var COMPANY = (SAVED && typeof SAVED.company === 'string') ? SAVED.company : '';
 function renderCompany(){
   var disp = $('company-display');
