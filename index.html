@@ -1076,6 +1076,8 @@
   #gm-dash-tiles .tile-warn .tile-n{ color:var(--warn); }
   #gm-dash-tiles .tile-ok{ opacity:.75; }
   #gm-dash-tiles .tile-ok .tile-n{ color:var(--ok); }
+  .dash-quick{ display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-top:.6rem; padding-top:.8rem; border-top:1px solid var(--line); }
+  .dash-quick-label{ font-size:.85rem; font-weight:700; color:var(--muted); margin-right:.2rem; }
   .ws-cols{ display:grid; grid-template-columns:1fr 1fr; gap:1.1rem; align-items:start; }
   @media (max-width:900px){ .ws-cols{ grid-template-columns:1fr; } }
   .ws-msg{ font-size:.88rem; color:var(--ink-soft); margin:0 0 .8rem; min-height:1.2em; }
@@ -1550,6 +1552,16 @@
         <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>Ce qui demande votre attention</h3>
         <p style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .8rem;">L'important d'un coup d'œil, avec un bouton pour y aller directement.</p>
         <div class="tile-grid" id="gm-dash-tiles" style="margin-top:.4rem;"></div>
+        <div class="dash-quick" aria-label="Accès rapide">
+          <span class="dash-quick-label">Accès rapide :</span>
+          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#dispatch">Dispatch</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#trello">Tâches</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#inventaire">Inventaire</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#excel">Comptabilité</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#documents">Documents</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#rappels">Rappels</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-dash-go="#gm-access">Équipe</button>
+        </div>
       </div>
       <div class="card acc-panel">
         <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4"/></svg>Mon entreprise</h3>
@@ -1584,7 +1596,7 @@
         </div>
         <p style="font-size:.85rem;margin:.5rem 0 0;" id="gm-msg-status" aria-live="polite"></p>
       </div>
-      <div class="card acc-panel">
+      <div class="card acc-panel" id="gm-access">
         <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7.5" r="4"/><path d="M22 12v7M19 15.5h6"/></svg>Gérer les accès</h3>
 
         <div class="table-wrap"><table class="stack-table" id="acc-table">
